@@ -132,3 +132,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 AUTH_USER_MODEL = 'users.User'
+import os
+
+# المسار الظاهري في المتصفح
+MEDIA_URL = '/media/'
+
+# المسار الفعلي للمجلد على قرص جهازك
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
