@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHIELD - لوحة تحكم المراقب</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Tajawal:wght@500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        /* إعدادات الهوية البصرية والألوان لـ Shield */
+       /* إعدادات الهوية البصرية والألوان لـ Shield */
+:root {
+    --primary-blue: #b2c5e1;
+    --secondary-blue: #1e3a8a;
+    --accent-blue: #3b68a8;
+    --accent-danger: #ef4444;
+    --alert-green: #0ecc71;
+    --warning-orange: #f39c12;
+    --glass-bg: rgba(255, 255, 255, 0.45);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --text-main: #1f2937;
+}
+
+body {
+    font-family: 'Cairo', 'Tajawal', sans-serif;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    color: var(--text-main);
+    min-height: 100vh;
+    margin: 0;
+    overflow-x: hidden;
+}
+
+/* شريط الملاحة العلوي */
+.top-navbar {
+    background: linear-gradient(145deg, #749ed6 0%, #13366d 100%);
+    backdrop-filter: blur(10px);
+    color: #fefefe;
+    padding: 10px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1050;
+    height: 65px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.brand-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-box svg {
+    width: 32px;
+    height: 32px;
+    fill: #5eaeef;
+}
+
+.project-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+}
+
+.user-name {
+    font-weight: 300;
+    font-size: 0.9rem;
+}
+
+.user-role {
+    font-size: 0.75rem;
+    color: #ffffff;
+}
+
+/* الهيكل العام وتوزيع المساحات */
+.dashboard-wrapper {
+    display: flex;
+    margin-top: 65px;
+    min-height: calc(100vh - 65px);
+}
+
+/* القائمة الجانبية مخصصة للمراقب */
+.sidebar {
+    width: 260px;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    border-left: 1px solid #3b68a8;
+    padding: 20px 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: fixed;
+    height: calc(100vh - 65px);
+    right: 0;
+}
+
+.sidebar .nav-link {
+    color: var(--text-main);
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    font-weight: 300;
+    transition: all 0.2s ease;
+}
+
+.sidebar .nav-link:hover {
+    background: rgba(59, 104, 168, 0.1);
+    color: var(--secondary-blue);
+}
+
+.sidebar .nav-link.active {
+    background: var(--primary-blue);
+    color: #ffffff;
+    font-weight: 300;
+}
+
+.clock-card {
+    background: rgba(255,255,255,0.6);
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+}
+
+/* منطقة المحتوى والبطاقات الزجاجية */
+.content-area {
+    margin-right: 260px;
+    width: calc(100% - 260px);
+    padding: 30px;
+}
+
+.view-section {
+    display: none;
+}
+
+.view-section.active-view {
+    display: block;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+}
+
+.card-danger-border { border-right: 4px solid var(--accent-danger); }
+.card-warning-border { border-right: 4px solid var(--warning-orange); }
+.card-critical-border { border-right: 4px solid #e74c3c; }
+.text-warning-custom { color: var(--warning-orange); }
+
+.card-title-custom {
+    color: #13366d;
+    font-weight: 500;
+    font-size: 0.8rem;
+}
+
+/* تخصيص الجداول الرقابية */
+.table-custom {
+    background: transparent !important;
+    margin-bottom: 0;
+}
+
+.table-custom thead th {
+    background: rgba(11, 25, 44, 0.05) !important;
+    color: #13366d;
+    font-weight: 300;
+    border-bottom: 2px solid rgba(11, 25, 44, 0.1);
+    padding: 12px;
+}
+
+.table-custom tbody td {
+    padding: 14px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: transparent !important;
+}
+
+.form-control-custom {
+    background: rgba(255, 255, 255, 0.7) !important;
+    border: 1px solid rgba(11, 25, 44, 0.15) !important;
+    border-radius: 6px;
+}
+
+.btn-accent {
+    background: var(--primary-blue);
+    color: #000000;
+    font-weight: 300;
+}
+
+.btn-accent:hover {
+    background: var(--secondary-blue);
+    color: #ffffff;
+}
+
+#map {
+    height: 380px;
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    z-index: 1;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.glass-card {
+    background: rgba(255, 255, 255, 0.65) !important; /* لون كحلي داكن شفاف */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 24px;
+    color: #000000 !important; /* إجبار جميع النصوص داخل الكارت على الظهور باللون الأبيض */
+}
+
+/* تنسيق حقول الإدخال لتتناسب مع الخلفية الداكنة */
+.glass-card .form-control, 
+.glass-card .form-select {
+    background-color: rgba(212, 196, 196, 0.07) !important; /* حقول زجاجية شبه شفافة */
+    border: 1px solid rgba(255, 255, 255, 0.406) !important;
+    color: #070707 !important; /* نص الكتابة داخل الحقل أبيض */
+    border-radius: 8px;
+}
+
+/* إظهار النص التوضيحي الباهت (Placeholder) داخل الحقول بوضوح */
+.glass-card .form-control::placeholder {
+    color: rgba(7, 5, 5, 0.45) !important;
+}
+
+/* إجبار العناوين (Labels) على اللون الأبيض */
+.glass-card label {
+    color: rgba(0, 0, 0, 0.9) !important;
+    font-weight: 300;
+    margin-bottom: 6px;
+}
+    </style>
+</head>
+<body>
+
+    <header class="top-navbar">
+        <div class="brand-area">
+            <div class="logo-box">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                </svg>
+            </div>
+            <h1 class="project-title">Shield</h1>
+        </div>
+        <div class="user-profile-area">
+            <div class="user-info">
+                <span class="user-name">أحمد الرقابي</span>
+                <span class="user-role">مراقب الجودة والامتثال (Auditor)</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="dashboard-wrapper">
+        <div class="sidebar">
+            <nav class="nav flex-column">
+                <div class="nav-link active" onclick="switchView('overview-view', this)"> نظرة عامة والإنذارات</div>
+                <div class="nav-link" onclick="switchView('live-trips-view', this)"> مراقبة الرحلات الحية</div>
+                <div class="nav-link" onclick="switchView('corrections-view', this)"> مراجعة طلبات التصحيح</div>
+                <div class="nav-link" onclick="switchView('breakdowns-view', this)"> تقييم بلاغات الأعطال</div>
+            </nav>
+            <div class="clock-card text-center text-muted small">
+                توقيت طرابلس: <span id="live-clock" class="fw-bold">--:--</span>
+            </div>
+        </div>
+
+        <div class="content-area">
+            
+            <div id="overview-view" class="view-section active-view">
+                <div class="row g-4 mb-4">
+                    <div class="col-12 col-md-4">
+                        <div class="glass-card d-flex justify-content-between align-items-center card-danger-border">
+                            <div>
+                                <span class="text-muted small d-block">إنذارات حرجية نشطة</span>
+                                <h3 class="fw-bold text-danger mt-1 mb-0">5 إنذارات</h3>
+                            </div>
+                            <span class="fs-2">🚨</span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="glass-card d-flex justify-content-between align-items-center card-warning-border">
+                            <div>
+                                <span class="text-muted small d-block">طلبات تصحيح معلقة</span>
+                                <h3 class="fw-bold mt-1 mb-0 text-warning-custom">8 طلبات</h3>
+                            </div>
+                            <span class="fs-2">📝</span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="glass-card d-flex justify-content-between align-items-center card-critical-border">
+                            <div>
+                                <span class="text-muted small d-block">بلاغات أعطال غير مقيمة</span>
+                                <h3 class="fw-bold text-danger mt-1 mb-0">3 بلاغات</h3>
+                            </div>
+                            <span class="fs-2">🛠️</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card mb-4">
+                    <h5 class="card-title-custom mb-3">🚨 إدارة الإنذارات الحية وتحليل العجز</h5>
+                    <div class="table-responsive">
+                        <table class="table table-custom">
+                            <thead>
+                                <tr>
+                                    <th>معرّف الإنذار</th>
+                                    <th>الناقلة / السائق</th>
+                                    <th>نوع المخالفة الرقابية</th>
+                                    <th>نسبة الفقد / العجز</th>
+                                    <th>موقع الرصد الحالي</th>
+                                    <th>الإجراء الرقابي الفوري</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>#AL-881</td>
+                                    <td>أحمد المصراتي (TRK-881)</td>
+                                    <td><span class="text-danger fw-bold">انحراف مسار مريب</span></td>
+                                    <td class="text-danger fw-bold">1.4% (حرج)</td>
+                                    <td>طريق العزيزية الفرعي</td>
+                                    <td>
+                                        <button class="btn btn-danger btn-sm px-2 py-1" onclick="triggerAlertAction('freeze')">إيقاف وتجميد</button>
+                                        <button class="btn btn-secondary btn-sm px-2 py-1" onclick="triggerAlertAction('justify')">طلب تبرير</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="live-trips-view" class="view-section">
+                <div class="glass-card mb-4">
+                    <h5 class="card-title-custom mb-3">📍 نظام تتبع ومراقبة الرحلات الحية والاقتران الجغرافي</h5>
+                    <div id="map"></div>
+                </div>
+                
+                <div class="glass-card">
+                    <h5 class="card-title-custom mb-3">🚛 سجل حركة الناقلات والتحقق المستمر من الأختام</h5>
+                    <div class="table-responsive">
+                        <table class="table table-custom">
+                            <thead>
+                                <tr>
+                                    <th>رقم الرحلة</th>
+                                    <th>المستودع المصدر</th>
+                                    <th>الوجهة المستهدفة</th>
+                                    <th>حالة مطابقة الأختام والـ QR</th>
+                                    <th>الكمية المصرحة (لتر)</th>
+                                    <th>مستوى العجز اللحظي</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>TRK-911</td>
+                                    <td>مستودع طرابلس الرئيسي</td>
+                                    <td>محطة زايد المركزية</td>
+                                    <td><span class="badge bg-success">متطابقة وموثقة برمجياً</span></td>
+                                    <td>45,000</td>
+                                    <td class="text-success fw-bold">0.05% (طبيعي)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="corrections-view" class="view-section">
+                <div class="glass-card">
+                    <h5 class="card-title-custom mb-1">📝 طلبات تصحيح القياسات الواردة من مناديب المحطات</h5>
+                    <p class="text-muted small mb-3">يتوجب على المراقب فحص مبررات الفروقات الفيزيائية بين قياس المستودع وقياس المحطة قبل الاعتماد البرمجي.</p>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-custom align-middle">
+                            <thead>
+                                <tr>
+                                    <th>رقم الطلب</th>
+                                    <th>المحطة / المندوب</th>
+                                    <th>القياس الأصلي (المستودع)</th>
+                                    <th>القياس الجديد المطلوب</th>
+                                    <th>سبب طلب التصحيح الميداني</th>
+                                    <th>قرار التدقيق والمراقبة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>#REQ-551</td>
+                                    <td>محطة جنزور / مندوب السلامة</td>
+                                    <td>40,000 لتر</td>
+                                    <td class="fw-bold text-primary">39,820 لتر</td>
+                                    <td>تغير حجم الشحنة بسبب الفارق الحراري أثناء النقل النهاري طويل المدى</td>
+                                    <td>
+                                        <button class="btn btn-success btn-sm" onclick="triggerCorrection('approve')">✅ اعتماد</button>
+                                        <button class="btn btn-danger btn-sm" onclick="triggerCorrection('reject')">❌ رفض</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="breakdowns-view" class="view-section">
+                <div class="glass-card">
+                    <h5 class="card-title-custom mb-1">🛠️ تقييم بلاغات الأعطال الميكانيكية الطارئة للناقلات</h5>
+                    <p class="text-muted small mb-3">تقييم البلاغات المرفوعة لحماية الشحنات وتحديد الإجراء الفوري.</p>
+                    
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div style="padding:16px; background:rgba(255,255,255,0.5); border-radius:8px; border:1px solid rgba(0,0,0,0.08);">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="badge bg-danger">بلاغ عطل حرج</span>
+                                    <span class="text-muted small">منذ 14 دقيقة</span>
+                                </div>
+                                <h6 class="fw-bold">الناقلة: TRK-552 - شاحنة مرسيدس هيدروليك</h6>
+                                <p class="small text-muted mb-2"><strong>وصف العطل:</strong> تسريب في صمام الأمان السفلي المانع للارتجاع، وتوقف الشاحنة اضطرارياً في بوابة غوط الرمان.</p>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">تقييم المراقب الفني والإجراء المتخذ:</label>
+                                    <select class="form-select form-control-custom form-select-sm mb-2" id="action-select-1">
+                                        <option value="1">توجيه فريق صيانة معتمد وتأمين الشحنة فوراً</option>
+                                        <option value="2">إصدار أمر نقل وتفريغ الشحنة في ناقلة بديلة</option>
+                                        <option value="3">رفض البلاغ واعتباره محاولة تهريب وتلاعب</option>
+                                    </select>
+                                    <textarea class="form-control form-control-custom form-control-sm" rows="2" placeholder="اكتب التوجيه الرقابي الإلزامي هنا للعمليات الميدانية..."></textarea>
+                                </div>
+                                <button class="btn btn-accent w-100 btn-sm" onclick="submitAssessment()">حفظ التقييم وإرسال التوجيه الرسمي</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // نظام التبديل والتشغيل التفاعلي للواجهة
+        let auditorMapInstance = null;
+
+        function switchView(viewId, element) {
+            const sections = document.querySelectorAll('.view-section');
+            sections.forEach(view => view.classList.remove('active-view'));
+
+            const targetSection = document.getElementById(viewId);
+            if (targetSection) targetSection.classList.add('active-view');
+
+            const navLinks = document.querySelectorAll('.sidebar .nav-link');
+            navLinks.forEach(link => link.classList.remove('active'));
+            element.classList.add('active');
+
+            // تشغيل الخريطة عند الانتقال إلى شاشة الرحلات
+            if (viewId === 'live-trips-view') {
+                setTimeout(() => {
+                    initAuditorLiveMap();
+                }, 200);
+            }
+        }
+
+        function runLiveClock() {
+            const clockElement = document.getElementById('live-clock');
+            if (!clockElement) return;
+            const now = new Date();
+            clockElement.textContent = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+        }
+        setInterval(runLiveClock, 1000);
+        runLiveClock();
+
+        function initAuditorLiveMap() {
+            if (auditorMapInstance) {
+                auditorMapInstance.invalidateSize();
+                return;
+            }
+            // تهيئة إحداثيات طرابلس بشكل مباشر
+            auditorMapInstance = L.map('map').setView([32.8872, 13.1930], 11);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(auditorMapInstance);
+
+            const activeTruck = L.marker([32.8872, 13.1930]).addTo(auditorMapInstance);
+            activeTruck.bindPopup('<b>ناقلة TRK-911</b><br>الحالة: قيد الامتثال والمطابقة برمجياً.').openPopup();
+
+            const suspectedTruck = L.marker([32.8120, 13.0450]).addTo(auditorMapInstance);
+            suspectedTruck.bindPopup('<b class="text-danger">ناقلة TRK-881</b><br>إنذار: انحراف مسار فوري خارج النطاق.');
+        }
+
+        function triggerAlertAction(actionType) {
+            if (actionType === 'freeze') alert('الإجراء الرقابي: تم تجميد حساب السائق وتوجيه البلاغ لإدارة شركة البريقة.');
+            if (actionType === 'justify') alert('الإجراء الرقابي: تم إرسال طلب تبرير آلي لجهاز المندوب الميداني في المحطة.');
+        }
+
+        function triggerCorrection(status) {
+            if (status === 'approve') alert('القرار: تم اعتماد طلب تعديل القياسات وتحديث المخزون البرمجي.');
+            if (status === 'reject') alert('القرار: تم رفض طلب التصحيح وإحالة الفاقد كعجز مالي مباشر على عاتق الناقل.');
+        }
+
+        function submitAssessment() {
+            const selectedAction = document.getElementById('action-select-1').value;
+            alert(`تم توثيق تقييمك الفني بالرقم (${selectedAction}) وإصدار التوجيه الرسمي لغرفة العمليات الميدانية فوراً.`);
+        }
+    </script>
+</body>
+</html>

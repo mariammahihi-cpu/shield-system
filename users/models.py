@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.conf import settings # 🛠️ استيراد الإعدادات لربط المستخدم بشكل قياسي
+from django.conf import settings
+
 
 class User(AbstractUser):
     ROLE_CHOICES = [
@@ -9,6 +10,7 @@ class User(AbstractUser):
         ('manager',    'المدير العام'),
         ('dispatcher', 'موظف المستودع'),
         ('agent',      'مندوب المحطة'),
+        ('driver',     'سائق الشاحنة'),
     ]
 
     full_name      = models.CharField(max_length=255, verbose_name="الاسم الكامل")
@@ -48,7 +50,6 @@ class User(AbstractUser):
 
 
 class UserDevice(models.Model):
-    # 🛠️ التعديل: استخدام settings.AUTH_USER_MODEL بدل السلسلة النصية المباشرة
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

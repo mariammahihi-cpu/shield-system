@@ -1,19 +1,26 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User # تأكدي من اسم الموديل عندكِ لو كان CustomUser أو User
+from .models import User, UserDevice
 
+
+@admin.register(User)
 class CustomUserAdmin(UserAdmin):
-    # الحقول التي تظهر عند تعديل بيانات مستخدم موجود مسبقاً
+    list_display = ('username', 'full_name', 'role', 'phone_number', 'is_locked', 'login_attempts', 'is_active')
+    list_filter  = ('role', 'is_locked', 'is_active')
+    search_fields = ('username', 'full_name', 'phone_number')
+    ordering = ('role', 'full_name')
     fieldsets = UserAdmin.fieldsets + (
-        ('بيانات Shield المخصصة', {
-            'fields': ('role', 'phone_number', 'warehouse', 'station', 'login_attempts', 'is_locked')
-        }),
+        ('معلومات Shield', {'fields': ('full_name', 'role', 'phone_number', 'is_locked', 'login_attempts')}),
     )
-    # الحقول التي تظهر عند إنشاء مستخدم جديد لأول مرة
     add_fieldsets = UserAdmin.add_fieldsets + (
-        ('بيانات Shield المخصصة', {
-            'fields': ('role', 'phone_number', 'warehouse', 'station')
-        }),
+        ('معلومات Shield', {'fields': ('full_name', 'role', 'phone_number')}),
     )
 
-admin.site.register(User, CustomUserAdmin)
+
+@admin.register(UserDevice)
+class UserDeviceAdmin(admin.ModelAdmin):
+    list_display = ('user', 'device_name', 'device_uuid', 'is_verified', 'bound_at', 'last_login_at')
+    list_filter = ('is_verified', 'bound_at')
+    search_fields = ('user__full_name', 'device_name', 'device_uuid')
+    readonly_fields = ('device_uuid', 'bound_at')
+    ordering = ('-bound_at',)

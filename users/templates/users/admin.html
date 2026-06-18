@@ -1,0 +1,480 @@
+واجهة مددير النظام
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHIELD - لوحة تحكم مدير النظام</title>
+    
+    <!-- الروابط الخارجية والمكتبات المشتركة -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Tajawal:wght@500;700;900&display=swap" rel="stylesheet">
+
+    <!-- إعادة استخدام نفس ملف التنسيق الموحد للهوية البصرية -->
+    <style>
+        /* إعدادات الهوية البصرية والألوان لـ Shield */
+:root {
+    --primary-blue: #b2c5e1;
+    --secondary-blue: #1e3a8a;
+    --accent-blue: #3b68a8;
+    --accent-danger: #ef4444;
+    --alert-green: #0ecc71;
+    --warning-orange: #f39c12;
+    --glass-bg: rgba(255, 255, 255, 0.45);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --text-main: #1f2937;
+}
+
+body {
+    font-family: 'Cairo', 'Tajawal', sans-serif;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    color: var(--text-main);
+    min-height: 100vh;
+    margin: 0;
+    overflow-x: hidden;
+}
+
+/* شريط الملاحة العلوي */
+.top-navbar {
+    background: linear-gradient(145deg, #749ed6 0%, #13366d 100%);
+    backdrop-filter: blur(10px);
+    color: #fefefe;
+    padding: 10px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1050;
+    height: 65px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.brand-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-box svg {
+    width: 32px;
+    height: 32px;
+    fill: #5eaeef;
+}
+
+.project-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.user-role {
+    font-size: 0.75rem;
+    color: #ffffff;
+}
+
+/* الهيكل العام وتوزيع المساحات */
+.dashboard-wrapper {
+    display: flex;
+    margin-top: 65px;
+    min-height: calc(100vh - 65px);
+}
+
+/* القائمة الجانبية مخصصة للمراقب */
+.sidebar {
+    width: 260px;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    border-left: 1px solid #3b68a8;
+    padding: 20px 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: fixed;
+    height: calc(100vh - 65px);
+    right: 0;
+}
+
+.sidebar .nav-link {
+    color: var(--text-main);
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    font-weight: 300;
+    transition: all 0.2s ease;
+}
+
+.sidebar .nav-link:hover {
+    background: rgba(59, 104, 168, 0.1);
+    color: var(--secondary-blue);
+}
+
+.sidebar .nav-link.active {
+    background: var(--primary-blue);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.clock-card {
+    background: rgba(255,255,255,0.6);
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+}
+
+/* منطقة المحتوى والبطاقات الزجاجية */
+.content-area {
+    margin-right: 260px;
+    width: calc(100% - 260px);
+    padding: 30px;
+}
+
+.view-section {
+    display: none;
+}
+
+.view-section.active-view {
+    display: block;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+}
+
+.card-danger-border { border-right: 4px solid var(--accent-danger); }
+.card-warning-border { border-right: 4px solid var(--warning-orange); }
+.card-critical-border { border-right: 4px solid #e74c3c; }
+.text-warning-custom { color: var(--warning-orange); }
+
+.card-title-custom {
+    color: #13366d;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+/* تخصيص الجداول الرقابية */
+.table-custom {
+    background: transparent !important;
+    margin-bottom: 0;
+}
+
+.table-custom thead th {
+    background: rgba(11, 25, 44, 0.05) !important;
+    color: #13366d;
+    font-weight: 600;
+    border-bottom: 2px solid rgba(11, 25, 44, 0.1);
+    padding: 12px;
+}
+
+.table-custom tbody td {
+    padding: 14px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: transparent !important;
+}
+
+.form-control-custom {
+    background: rgba(255, 255, 255, 0.7) !important;
+    border: 1px solid rgba(11, 25, 44, 0.15) !important;
+    border-radius: 6px;
+}
+
+.btn-accent {
+    background: var(--primary-blue);
+    color: #000000;
+    font-weight: 600;
+}
+
+.btn-accent:hover {
+    background: var(--secondary-blue);
+    color: #ffffff;
+}
+
+#map {
+    height: 380px;
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    z-index: 1;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.glass-card {
+    background: rgba(255, 255, 255, 0.65) !important; /* لون كحلي داكن شفاف */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 24px;
+    color: #000000 !important; /* إجبار جميع النصوص داخل الكارت على الظهور باللون الأبيض */
+}
+
+/* تنسيق حقول الإدخال لتتناسب مع الخلفية الداكنة */
+.glass-card .form-control, 
+.glass-card .form-select {
+    background-color: rgba(212, 196, 196, 0.07) !important; /* حقول زجاجية شبه شفافة */
+    border: 1px solid rgba(255, 255, 255, 0.406) !important;
+    color: #070707 !important; /* نص الكتابة داخل الحقل أبيض */
+    border-radius: 8px;
+}
+
+/* إظهار النص التوضيحي الباهت (Placeholder) داخل الحقول بوضوح */
+.glass-card .form-control::placeholder {
+    color: rgba(7, 5, 5, 0.45) !important;
+}
+
+/* إجبار العناوين (Labels) على اللون الأبيض */
+.glass-card label {
+    color: rgba(0, 0, 0, 0.9) !important;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+    </style>
+</head>
+<body>
+
+    <header class="top-navbar">
+        <div class="brand-area">
+            <div class="logo-box">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                </svg>
+            </div>
+            <h1 class="project-title">Shield <span class="fs-6 text-info fw-normal"></span></h1>
+        </div>
+        <div class="user-profile-area">
+            <div class="user-info">
+                <span class="user-name">المهندس علي الإدريسي</span>
+                <span class="user-role">مدير النظام الفني (System Admin)</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="dashboard-wrapper">
+        <!-- القائمة الجانبية لمدير النظام بناءً على Ues Case.jpg -->
+        <div class="sidebar">
+            <nav class="nav flex-column">
+                <div class="nav-link active" onclick="switchAdminView('users-mgmt-view', this)">👥 إدارة حسابات المستخدمين</div>
+                <div class="nav-link" onclick="switchAdminView('devices-mgmt-view', this)">📱 إدارة ربط الأجهزة</div>
+                <div class="nav-link" onclick="switchAdminView('audit-logs-view', this)">📜 استعراض سجلات الإجراءات</div>
+            </nav>
+            <div class="clock-card text-center text-muted small">
+                توقيت طرابلس: <span id="live-clock" class="fw-bold">--:--</span>
+            </div>
+        </div>
+
+        <div class="content-area">
+            
+            <!-- شاشة إدارة حسابات المستخدمين (تنشيط، إيقاف، فك حظر) -->
+            <div id="users-mgmt-view" class="view-section active-view">
+                <div class="row g-4 mb-4">
+                    <div class="col-12 col-md-4">
+                        <div class="glass-card d-flex justify-content-between align-items-center card-warning-border">
+                            <div>
+                                <span class="text-muted small d-block">حسابات مقيدة أو محظورة</span>
+                                <h3 class="fw-bold text-warning mt-1 mb-0">2 حسابات</h3>
+                            </div>
+                            <span class="fs-2">🔒</span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="glass-card d-flex justify-content-between align-items-center card-critical-border">
+                            <div>
+                                <span class="text-muted small d-block">طلبات إنشاء حساب معلقة</span>
+                                <h3 class="fw-bold text-danger mt-1 mb-0">4 طلبات</h3>
+                            </div>
+                            <span class="fs-2">➕</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <h5 class="card-title-custom mb-3">👤 التحكم في صلاحيات وحسابات موظفي النظام</h5>
+                    <div class="table-responsive">
+                        <table class="table table-custom align-middle">
+                            <thead>
+                                <tr>
+                                    <th>المستخدم</th>
+                                    <th>الدور الوظيفي</th>
+                                    <th>حالة الحساب</th>
+                                    <th>آخر ظهور النشاط</th>
+                                    <th>الإجراء الإداري</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>أحمد المصراتي (TRK-881)</td>
+                                    <td>سائق ناقلة ميداني</td>
+                                    <td><span class="badge bg-danger">محظور تلقائياً لإنذار حرج</span></td>
+                                    <td>منذ ساعة</td>
+                                    <td>
+                                        <button class="btn btn-success btn-sm" onclick="userAction('activate', 'أحمد المصراتي')">🔓 تنشيط / فك الحظر</button>
+                                        <button class="btn btn-secondary btn-sm" onclick="userAction('freeze', 'أحمد المصراتي')">🚫 إيقاف الحساب</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>سالم الترهوني</td>
+                                    <td>موظف مستودع (Dispatcher)</td>
+                                    <td><span class="badge bg-success">نشط</span></td>
+                                    <td>الآن</td>
+                                    <td>
+                                        <button class="btn btn-danger btn-sm" onclick="userAction('freeze', 'سالم الترهوني')">🚫 إيقاف مؤقت</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- شاشة إدارة ربط الأجهزة (اقتران وتأمين الـ QR والـ MAC Address) -->
+            <div id="devices-mgmt-view" class="view-section">
+                <div class="glass-card">
+                    <h5 class="card-title-custom mb-1">📱 إدارة ربط الأجهزة الذكية والأختام الإلكترونية</h5>
+                    <p class="text-muted small mb-3">حظر أو توثيق الأجهزة اللوحية والمحمولة الخاصة بمناديب المحطات وموظفي المستودعات لمنع التلاعب الجغرافي.</p>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-custom align-middle">
+                            <thead>
+                                <tr>
+                                    <th>معرف الجهاز</th>
+                                    <th>الموظف المقترن به</th>
+                                    <th>نوع الصلاحية الميدانية</th>
+                                    <th>عنوان الـ MAC / التعريف</th>
+                                    <th>حالة الارتباط</th>
+                                    <th>القرار الفني</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>#DEV-992</td>
+                                    <td>مندوب محطة جنزور</td>
+                                    <td>مسح QR وإدخال قياسات شحنة</td>
+                                    <td><code>00:1A:3F:F1:4C:C2</code></td>
+                                    <td><span class="badge bg-warning text-dark">جهاز جديد يطلب الاقتران</span></td>
+                                    <td>
+                                        <button class="btn btn-success btn-sm" onclick="deviceAction('approve', '#DEV-992')">✅ اعتماد الربط</button>
+                                        <button class="btn btn-danger btn-sm" onclick="deviceAction('reject', '#DEV-992')">❌ رفض وفك الارتباط</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- شاشة استعراض سجلات الإجراءات والتدقيق الفني للعمليات ومكافحة الفساد -->
+            <div id="audit-logs-view" class="view-section">
+                <div class="glass-card">
+                    <h5 class="card-title-custom mb-1">📜 استعراض السجلات الشاملة وإجراءات النظام (System Audit Logs)</h5>
+                    <p class="text-muted small mb-3">تتبع رقمي غير قابل للتعديل لكافة القرارات المتخذة من قبل المراقبين أو المناديب في غرف العمليات.</p>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-custom table-hover">
+                            <thead>
+                                <tr>
+                                    <th>الطابع الزمني</th>
+                                    <th>الموظف المسؤول</th>
+                                    <th>نوع الإجراء الفني</th>
+                                    <th>تفاصيل العملية والبيانات المتأثرة</th>
+                                    <th>عنوان الـ IP</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>2026-06-12 14:22:10</td>
+                                    <td>المراقب أحمد الرقابي</td>
+                                    <td><span class="text-danger fw-bold">تجميد حساب سائق</span></td>
+                                    <td>تجميد فوري للحساب TRK-881 بسبب انحراف مسار مريب عن العزيزية</td>
+                                    <td><code>197.234.41.89</code></td>
+                                </tr>
+                                <tr>
+                                    <td>2026-06-12 13:05:44</td>
+                                    <td>المستودع الرئيسي</td>
+                                    <td><span class="text-primary fw-bold">إنشاء رحلة جديدة</span></td>
+                                    <td>توليد رمز QR وطباعة أختام إلكترونية للرحلة TRK-911</td>
+                                    <td><code>197.234.40.12</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ربط ملف العمليات البرمجية للمدير -->
+    <script >
+        // نظام التحكم والتنقل في لوحة مدير النظام (System Admin)
+
+function switchAdminView(viewId, element) {
+    // إخفاء جميع الأقسام النشطة
+    const sections = document.querySelectorAll('.view-section');
+    sections.forEach(view => view.classList.remove('active-view'));
+
+    // إظهار القسم المحدد
+    const targetSection = document.getElementById(viewId);
+    if (targetSection) targetSection.classList.add('active-view');
+
+    // تحديث الحالة النشطة في القائمة الجانبية
+    const navLinks = document.querySelectorAll('.sidebar .nav-link');
+    navLinks.forEach(link => link.classList.remove('active'));
+    element.classList.add('active');
+}
+
+// السيرفر الزمني الحي
+function runAdminLiveClock() {
+    const clockElement = document.getElementById('live-clock');
+    if (!clockElement) return;
+    const now = new Date();
+    clockElement.textContent = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+}
+setInterval(runAdminLiveClock, 1000);
+runAdminLiveClock();
+
+// وظائف التحكم بالحسابات (إيقاف، تنشيط، فك حظر) بناءً على حالات الاستخدام
+function userAction(action, username) {
+    if (action === 'activate') {
+        alert(`تم تنفيذ الإجراء الإداري: فك حظر الحساب بنجاح وإعادة تنشيط الموظف (${username}) على قواعد البيانات.`);
+    }
+    if (action === 'freeze') {
+        alert(`تم تنفيذ الإجراء الإداري: إيقاف وتجميد حساب الموظف (${username}) وسحب الصلاحيات الميدانية فوراً.`);
+    }
+}
+
+// وظائف التحكم بالأجهزة والاقتران
+function deviceAction(status, deviceId) {
+    if (status === 'approve') {
+        alert(`القرار الإداري: تم اعتماد ربط وتوثيق عنوان MAC للجهاز (${deviceId}) في خادم النظام الفني.`);
+    }
+    if (status === 'reject') {
+        alert(`القرار الإداري: تم رفض اقتران الجهاز (${deviceId}) وإدراجه في القائمة السوداء لمنع الاتصال بالخادم.`);
+    }
+}
+    </script>
+</body>
+</html>

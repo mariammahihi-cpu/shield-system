@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHIELD - واجهة مندوب المحطة المتجاوبة</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Tajawal:wght@500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        /* إعدادات الهوية البصرية والألوان لـ Shield */
+        :root {
+            --primary-blue: #b2c5e1;
+            --secondary-blue: #1e3a8a;
+            --accent-blue: #3b68a8;
+            --accent-danger: #ef4444;
+            --alert-green: #0ecc71;
+            --warning-orange: #f39c12;
+            --glass-bg: rgba(255, 255, 255, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --text-main: #1f2937;
+        }
+
+        body {
+            font-family: 'Cairo', 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* شريط الملاحة العلوي */
+        .top-navbar {
+            background: linear-gradient(145deg, #749ed6 0%, #13366d 100%);
+            backdrop-filter: blur(10px);
+            color: #fefefe;
+            padding: 10px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1050;
+            height: 65px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .brand-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-box svg {
+            width: 32px;
+            height: 32px;
+            fill: #5eaeef;
+        }
+
+        .project-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            text-align: right;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            color: #ffffff;
+        }
+
+        /* الهيكل العام وتوزيع المساحات - اللابتوب الافتراضي */
+        .dashboard-wrapper {
+            display: flex;
+            margin-top: 65px;
+            min-height: calc(100vh - 65px);
+        }
+
+        /* القائمة الجانبية الافتراضية للكمبيوتر */
+        .sidebar {
+            width: 260px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border-left: 1px solid #3b68a8;
+            padding: 20px 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: fixed;
+            height: calc(100vh - 65px);
+            right: 0;
+            z-index: 1000;
+        }
+
+        .sidebar .nav-link {
+            color: var(--text-main);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-align: right;
+        }
+
+        .sidebar .nav-link:hover {
+            background: rgba(59, 104, 168, 0.1);
+            color: var(--secondary-blue);
+        }
+
+        .sidebar .nav-link.active {
+            background: var(--accent-blue);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .clock-card {
+            background: rgba(255,255,255,0.6);
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+        }
+
+        /* منطقة المحتوى للابتوب */
+        .content-area {
+            margin-right: 260px;
+            width: calc(100% - 260px);
+            padding: 30px;
+            transition: all 0.3s ease;
+        }
+
+        /* 📱 تعديلات الاستجابة للهواتف المحمولة */
+        @media (max-width: 767.98px) {
+            .top-navbar {
+                padding: 10px 15px;
+            }
+            .project-title {
+                font-size: 1.1rem;
+            }
+            .user-profile-area {
+                display: none;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: 65px;
+                flex-direction: row;
+                position: fixed;
+                bottom: 0;
+                top: auto;
+                left: 0;
+                right: 0;
+                padding: 5px 10px;
+                border-left: none;
+                border-top: 1px solid var(--accent-blue);
+                background: rgba(255, 255, 255, 0.95);
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            }
+
+            .sidebar .nav {
+                flex-direction: row !important;
+                width: 100%;
+                justify-content: space-around;
+                align-items: center;
+            }
+
+            .sidebar .nav-link {
+                margin-bottom: 0;
+                padding: 8px 10px;
+                font-size: 0.85rem;
+                text-align: center;
+                flex: 1;
+            }
+
+            .clock-card {
+                display: none;
+            }
+
+            .content-area {
+                margin-right: 0;
+                width: 100%;
+                padding: 15px;
+                margin-bottom: 75px;
+            }
+            
+            .glass-card {
+                padding: 16px;
+            }
+        }
+
+        /* بقية التنسيقات الفنية */
+        .view-section { display: none; }
+        .view-section.active-view { display: block; animation: fadeIn 0.3s ease-in-out; }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            color: #000000 !important;
+        }
+
+        .card-danger-border { border-right: 4px solid var(--accent-danger); }
+        .card-warning-border { border-right: 4px solid var(--warning-orange); }
+        .card-critical-border { border-right: 4px solid #e74c3c; }
+
+        .card-title-custom { color: #13366d; font-weight: 700; font-size: 1.1rem; }
+
+        .glass-card .form-control, 
+        .glass-card .form-select {
+            background-color: rgba(212, 196, 196, 0.07) !important;
+            border: 1px solid rgba(255, 255, 255, 0.4) !important;
+            color: #070707 !important;
+            border-radius: 8px;
+        }
+
+        .glass-card .form-control::placeholder { color: rgba(7, 5, 5, 0.45) !important; }
+        .glass-card label { color: rgba(0, 0, 0, 0.9) !important; font-weight: 500; margin-bottom: 6px; }
+
+        /* تخصيص مظهر النوافذ المنبثقة لتطابق الهوية */
+        .modal-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            border-radius: 16px;
+            border: 1px solid var(--accent-blue);
+        }
+        .modal-header {
+            background: linear-gradient(145deg, #749ed6 0%, #13366d 100%);
+            color: #fff;
+            border-top-left-radius: 14px;
+            border-top-right-radius: 14px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="top-navbar">
+        <div class="brand-area">
+            <div class="logo-box">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                </svg>
+            </div>
+            <h1 class="project-title">Shield <span class="fs-6 text-light-50 fw-normal">(Station Agent)</span></h1>
+        </div>
+        <div class="user-profile-area">
+            <div class="user-info">
+                <span class="user-name">م. ملاك جمال</span>
+                <span class="user-role">مندوب محطة</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="dashboard-wrapper">
+        <div class="sidebar">
+            <nav class="nav flex-column">
+                <div class="nav-link active" onclick="switchAgentView('receive-shipment-view', this)">استلام وتدقيق شحنة</div>
+                <div class="nav-link" onclick="switchAgentView('reports-requests-view', this)">البلاغات والتصحيح</div>
+            </nav>
+            <div class="clock-card text-center text-muted small">
+                توقيت المحطة: <span id="live-clock" class="fw-bold">--:--</span>
+            </div>
+        </div>
+
+        <div class="content-area">
+            
+            <div id="receive-shipment-view" class="view-section active-view">
+                <div class="glass-card mb-4">
+                    <h5 class="card-title-custom text-info mb-1">🔍 خطوة (1/2): مسح الشحنة والتحقق من الأختام</h5>
+                    <p class="text-muted small mb-4">قم بمسح رمز الـ QR الخاص بالسائق للتحقق من بيانات ناقلة النفط ومطابقتها بالأختام المادية.</p>
+                    
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <div class="p-4 rounded border border-secondary text-center h-100 d-flex flex-column justify-content-center align-items-center" style="background: rgba(0,0,0,0.05);">
+                                <span class="fs-1 d-block mb-2">📸</span>
+                                <button class="btn btn-info btn-sm w-100 fw-bold py-2" onclick="simulateQRScan()">📱 تشغيل كاميرا مسح الـ QR</button>
+                                <div id="qr-scan-status" class="mt-2 text-muted small">بانتظار مسح الرمز الميداني...</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small">الأختام الإلكترونية المسجلة بالمنظومة</label>
+                            <input type="text" class="form-control mb-2" id="expected-seals" placeholder="ستظهر هنا تلقائياً بعد مسح الـ QR" readonly>
+                            
+                            <label class="form-label small mt-2">الكمية الواردة بمستند الشحن (لتر)</label>
+                            <input type="number" class="form-control mb-2" id="expected-qty" placeholder="ستظهر الكمية المطلوبة تلقائياً" readonly>
+
+                            <button class="btn btn-outline-success w-100 fw-bold btn-sm mt-2 py-2" id="verify-seals-btn" onclick="triggerSealVerification()" disabled>🔒 إجراء مطابقة الأختام المادية</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card mb-4">
+                    <h5 class="card-title-custom text-success mb-1">📐 خطوة (2/2): إدخال قياسات الكمية المستلمة فعلياً</h5>
+                    <p class="text-muted small mb-4">يتم تعبئة البيانات بعد إتمام عملية تفريغ الوقود في خزانات الأرضية للتحقق من نسبة الفقد أو الاختلاس.</p>
+                    
+                    <form id="measurement-form" onsubmit="handleMeasurementSubmit(event)">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small">الكمية المقاسة بالخزان (لتر)</label>
+                                <input type="number" class="form-control" id="actual-qty" placeholder="أدخل الكمية المستلمة" required disabled>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small">رقم خزان الاستقبال الأرضي</label>
+                                <select class="form-select" id="tank-id" required disabled>
+                                    <option value="TK-01">خزان بنزين ممتاز - 01</option>
+                                    <option value="TK-02">خزان بنزين ممتاز - 02</option>
+                                </select>
+                            </div>
+                            <div class="col-12 text-end mt-4">
+                                <button type="submit" id="submit-qty-btn" class="btn btn-success w-100 w-md-auto px-4 fw-bold py-2" disabled>💾 حفظ وإرسال سجل القياسات الكلي</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="reports-requests-view" class="view-section">
+                <div class="glass-card mb-4 card-warning-border">
+                    <h5 class="card-title-custom text-warning mb-1">📝 تقديم طلب تصحيح بيانات شحنة (Correction Request)</h5>
+                    <p class="text-muted small mb-3">يُستخدم حصرياً في حالة وجود خطأ بشري في إدخال بيانات الـ QR من المستودع.</p>
+                    
+                    <form id="correction-form" onsubmit="handleCorrectionSubmit(event)">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small">رقم الرحلة أو الناقلة المعنية</label>
+                                <input type="text" id="corr-trip-id" class="form-control" placeholder="مثال: TRK-911" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small">نوع التصحيح المطلوب</label>
+                                <select id="corr-type" class="form-select" required>
+                                    <option value="">اختر النوع...</option>
+                                    <option value="تعديل أرقام الأختام نتيجة تلف كود الختم">تعديل أرقام الأختام نتيجة تلف كود الختم</option>
+                                    <option value="تعديل الكمية الافتراضية للرحلة">تعديل الكمية الافتراضية للرحلة</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small">السبب التفصيلي والمبرر الميداني للطلب</label>
+                                <textarea id="corr-reason" class="form-control" rows="3" placeholder="اكتبي شرحاً وافياً للمراقب..." required></textarea>
+                            </div>
+                            <div class="col-12 text-end">
+                                <button type="submit" class="btn btn-warning w-100 w-md-auto text-dark fw-bold px-4 py-2">📤 إرسال طلب التصحيح</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="glass-card card-critical-border">
+                    <h5 class="card-title-custom text-danger mb-1">🚨 الإبلاغ الفوري عن عطل ميداني / طوارئ</h5>
+                    <p class="text-muted small mb-3">إشعار حرج يُرسل فوراً لغرفة عمليات النظام والمراقبين.</p>
+                    
+                    <form id="malfunction-form" onsubmit="handleMalfunctionSubmit(event)">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small">تصنيف العطل الميداني</label>
+                                <select class="form-select" id="malfunction-type" required>
+                                    <option value="">اختر التصنيف الفني...</option>
+                                    <option value="عطل في جهاز الحساس الجغرافي">عطل في جهاز الحساس الجغرافي</option>
+                                    <option value="تسريب أو فيضان في خزان الاستقبال">تسريب أو فيضان في خزان الاستقبال</option>
+                                    <option value="عطل كامل في منظومة قياس الـ ATG">عطل كامل في منظومة قياس الـ ATG</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small">درجة الخطورة الميدانية</label>
+                                <select id="malfunction-impact" class="form-select text-danger fw-bold" required>
+                                    <option value="حرج جداً (توقف العمليات فوراً)">🔴 حرج جداً (توقف العمليات فوراً)</option>
+                                    <option value="متوسط (خلل فني يتطلب صيانة)">🟡 متوسط (خلل فني يتطلب صيانة)</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small">ملاحظات العطل وتأثيره الحركي</label>
+                                <textarea id="malfunction-desc" class="form-control" rows="2" placeholder="اكتبي تفاصيل العطل الفني هنا..." required></textarea>
+                            </div>
+                            <div class="col-12 text-end">
+                                <button type="submit" class="btn btn-danger w-100 w-md-auto fw-bold px-4 py-2">⚠️ بث بلاغ العطل الطارئ</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="modal fade" id="shieldConfirmModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="confirmModalTitle">تأكيد الإجراء الميداني</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-right">
+                    <p id="confirmModalBody" class="fs-6"></p>
+                </div>
+                <div class="modal-footer justify-content-start">
+                    <button type="button" id="modalConfirmBtn" class="btn btn-success px-4 fw-bold">تأكيد وإرسال</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="shieldAlertModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" id="alertModalHeader">
+                    <h5 class="modal-title fw-bold" id="alertModalTitle">إشعار النظام</h5>
+                </div>
+                <div class="modal-body text-center">
+                    <span id="alertModalIcon" class="fs-1 d-block mb-3"></span>
+                    <p id="alertModalBody" class="fs-6 fw-bold"></p>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">موافق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // إعداد كائنات الـ Modals برمجياً للتحكم بها عبر الـ JavaScript
+        const confirmModal = new bootstrap.Modal(document.getElementById('shieldConfirmModal'));
+        const alertModal = new bootstrap.Modal(document.getElementById('shieldAlertModal'));
+
+        function switchAgentView(viewId, element) {
+            const sections = document.querySelectorAll('.view-section');
+            sections.forEach(view => view.classList.remove('active-view'));
+
+            const targetSection = document.getElementById(viewId);
+            if (targetSection) targetSection.classList.add('active-view');
+
+            const navLinks = document.querySelectorAll('.sidebar .nav-link');
+            navLinks.forEach(link => link.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        function runAgentClock() {
+            const clockElement = document.getElementById('live-clock');
+            if (!clockElement) return;
+            const now = new Date();
+            clockElement.textContent = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+        }
+        setInterval(runAgentClock, 1000);
+        runAgentClock();
+
+        // محاكاة مسح الـ QR وضخ البيانات داخل الحقول المغلقة
+        function simulateQRScan() {
+            document.getElementById('qr-scan-status').innerHTML = "✅ <span class='text-success fw-bold'>تم مسح الـ QR للرحلة #SHD-7701 بنجاح!</span>";
+            document.getElementById('expected-seals').value = "Seal-Top-881, Seal-Bottom-02";
+            document.getElementById('expected-qty').value = "40000"; // الآن يعمل بكفاءة ولا يسبب Error لـأن الحقل موجود
+            document.getElementById('verify-seals-btn').removeAttribute('disabled');
+        }
+
+        // مطابقة الأختام
+        function triggerSealVerification() {
+            document.getElementById('confirmModalTitle').textContent = "🔒 إجراء مطابقة الأختام المادية";
+            document.getElementById('confirmModalBody').textContent = "هل أنت متأكد من سلامة ومطابقة الأختام المادية على الناقلة مع الأرقام المستلمة إلكترونياً بالمنظومة؟";
+            
+            document.getElementById('modalConfirmBtn').onclick = function() {
+                confirmModal.hide();
+                
+                // فتح حقول القياس للخطوة الثانية بعد التأكيد
+                document.getElementById('actual-qty').removeAttribute('disabled');
+                document.getElementById('tank-id').removeAttribute('disabled');
+                document.getElementById('submit-qty-btn').removeAttribute('disabled');
+                
+                showAlertModal("تمت عملية المطابقة إلكترونياً بنجاح! تم التحقق وتفعيل حقول إدخال قياسات الخزانات الأرضية.", "success", "✅");
+            };
+            confirmModal.show();
+        }
+
+        // معالجة وحساب كميات الاستلام وفحص الفقد/العجز
+        function handleMeasurementSubmit(event) {
+            event.preventDefault();
+            const expected = parseFloat(document.getElementById('expected-qty').value);
+            const actual = parseFloat(document.getElementById('actual-qty').value);
+            const difference = expected - actual;
+
+            document.getElementById('confirmModalTitle').textContent = "💾 تأكيد حفظ وإرسال البيانات الكلية";
+            document.getElementById('confirmModalBody').textContent = `هل أنت متأكد من صحة الكمية المقاسة فعلياً (${actual} لتر) في خزان الاستقبال المختار؟ سيتم قفل السجل وبثه للمنظومة المركزية.`;
+
+            document.getElementById('modalConfirmBtn').onclick = function() {
+                confirmModal.hide();
+                if (difference > 0) {
+                    showAlertModal(`تم حفظ القياسات بنجاح في المنظومة. \n⚠️ تحذير حرج: تم رصد عجز وفقد في الشحنة بمقدار (${difference} لتر). تم إصدار أمر تقصّي وإنذار تلقائي لغرفة المراقبة والتحكم بالشركة.`, "danger", "🚨");
+                } else {
+                    showAlertModal(`تم حفظ وتوثيق السجل الفني بنجاح. الكميات المستلمة مطابقة تماماً للمستندات الصادرة عن المستودع دون أي عجز.`, "success", "🎉");
+                }
+                document.getElementById('measurement-form').reset();
+                // إعادة قفل الحقول للحفاظ على سلامة تدفق البيانات (State flow)
+                document.getElementById('actual-qty').setAttribute('disabled', 'true');
+                document.getElementById('tank-id').setAttribute('disabled', 'true');
+                document.getElementById('submit-qty-btn').setAttribute('disabled', 'true');
+            };
+            confirmModal.show();
+        }
+
+        // معالجة إرسال طلب التصحيح مع نافذة التأكيد
+        function handleCorrectionSubmit(event) {
+            event.preventDefault();
+            const tripId = document.getElementById('corr-trip-id').value;
+            const type = document.getElementById('corr-type').value;
+
+            document.getElementById('confirmModalTitle').textContent = "📝 تأكيد إرسال طلب التصحيح";
+            document.getElementById('confirmModalBody').textContent = `هل أنت متأكد من إرسال طلب تصحيح البيانات للرحلة رقم (${tripId}) بتصنيف (${type})؟ سيتم مراجعة الطلب والمبررات الميدانية من قِبل المراقب الفني للغرفة قبل التطبيق.`;
+
+            document.getElementById('modalConfirmBtn').onclick = function() {
+                confirmModal.hide();
+                showAlertModal(`تم تسليم طلب التصحيح الخاص بالرحلة (${tripId}) بنجاح إلى سيرفر المراقبة المركزي، وهو قيد المراجعة الفنية الآن.`, "success", "📤");
+                document.getElementById('correction-form').reset();
+            };
+            confirmModal.show();
+        }
+
+        // معالجة بلاغات الأعطال والطوارئ الفورية
+        function handleMalfunctionSubmit(event) {
+            event.preventDefault();
+            const type = document.getElementById('malfunction-type').value;
+            const impact = document.getElementById('malfunction-impact').value;
+
+            document.getElementById('confirmModalTitle').textContent = "⚠️ تأكيد بث بلاغ طوارئ عاجل";
+            document.getElementById('confirmModalBody').textContent = `تنبيه: أنت على وشك بث بلاغ عن عطل ميداني من نوع (${type}) وبدرجة خطورة: [ ${impact} ]. سيتم تعميم البلاغ فوراً لغرفة الطوارئ والمهندسين المناوبين. هل تؤكد الإرسال؟`;
+
+            document.getElementById('modalConfirmBtn').onclick = function() {
+                confirmModal.hide();
+                showAlertModal(`🚨 بلاغ طوارئ حرج جداً!\nتم بث الإشعار الميداني فوراً لكافة مستويات الإدارة الفنية بالنظام وجاري اتخاذ تدابير الصيانة والسلامة الفورية لمعالجة خلل (${type}).`, "danger", "🛑");
+                document.getElementById('malfunction-form').reset();
+            };
+            confirmModal.show();
+        }
+
+        // دالة مساعدة لتشكيل مظهر نافذة الإشعارات والإنذارات البرمجية حسب الحالة الفنية للحدث
+        function showAlertModal(message, type, icon) {
+            const header = document.getElementById('alertModalHeader');
+            document.getElementById('alertModalBody').innerText = message;
+            document.getElementById('alertModalIcon').innerText = icon;
+
+            if (type === 'danger') {
+                header.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)';
+                document.getElementById('alertModalTitle').textContent = "تنبيــه نـظـام حـرج";
+            } else {
+                header.style.background = 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)';
+                document.getElementById('alertModalTitle').textContent = "إشعار نجاح العملية";
+            }
+            alertModal.show();
+        }
+    </script>
+</body>
+</html>
