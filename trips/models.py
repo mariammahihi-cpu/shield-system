@@ -23,6 +23,7 @@ class Station(models.Model):
     geofence_radius  = models.PositiveIntegerField(default=50, verbose_name="نطاق الأمان (متر)")
     is_active        = models.BooleanField(default=True, verbose_name="نشطة")
     is_banned        = models.BooleanField(default=False, verbose_name="موقوفة")
+    agents           = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='assigned_stations', verbose_name="المندوبون المعينون")
     created_at       = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -40,6 +41,7 @@ class Warehouse(models.Model):
     location_city    = models.CharField(max_length=100, verbose_name="المدينة")
     address_details  = models.TextField(blank=True, null=True, verbose_name="تفاصيل العنوان")
     is_active        = models.BooleanField(default=True, verbose_name="نشط")
+    employees        = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='assigned_warehouses', verbose_name="الموظفون المعينون")
     created_at       = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -105,7 +107,7 @@ class Trip(models.Model):
     truck        = models.ForeignKey(Truck, on_delete=models.PROTECT, verbose_name="الشاحنة")
     station      = models.ForeignKey(Station, on_delete=models.PROTECT, verbose_name="المحطة")
     warehouse    = models.ForeignKey(Warehouse, on_delete=models.PROTECT, verbose_name="المستودع")
-    fuel_type    = models.CharField(max_length=10, default='petrol', editable=False, verbose_name="نوع الوقود")
+    fuel_type    = models.CharField(max_length=10, default='petrol', editable=False, verbose_name="نوع الوقود (بنزين فقط)")
     seal_numbers = models.CharField(max_length=255, verbose_name="أرقام الأختام")
 
     shipped_volume_ambient = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="الحجم الظاهري المشحون (لتر)")
@@ -128,9 +130,10 @@ class Trip(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"رحلة {self.trip_code} → {self.station.station_name}"
+        return f"رحلة {self.trip_code} → {self.station.station_name} (بنزين)"
 
     def save(self, *args, **kwargs):
+        self.fuel_type = 'petrol'
         if not self.trip_code:
             self.trip_code = generate_trip_code()
         if not self.qr_expires_at:

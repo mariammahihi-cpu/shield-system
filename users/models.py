@@ -10,32 +10,14 @@ class User(AbstractUser):
         ('manager',    'المدير العام'),
         ('dispatcher', 'موظف المستودع'),
         ('agent',      'مندوب المحطة'),
-        ('driver',     'سائق الشاحنة'),
     ]
 
     full_name      = models.CharField(max_length=255, verbose_name="الاسم الكامل")
     role           = models.CharField(max_length=30, choices=ROLE_CHOICES, verbose_name="الدور")
     phone_number   = models.CharField(max_length=15, unique=True, blank=True, null=True, verbose_name="رقم الهاتف")
-    
+
     login_attempts = models.PositiveIntegerField(default=0, verbose_name="محاولات الدخول الفاشلة")
     is_locked      = models.BooleanField(default=False, verbose_name="هل الحساب مقفل؟")
-
-    warehouse = models.ForeignKey(
-        'trips.Warehouse', 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
-        related_name='employees',
-        verbose_name="المستودع التابع له (خاص بموظفي المستودعات)"
-    )
-    station = models.ForeignKey(
-        'trips.Station', 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
-        related_name='agents',
-        verbose_name="المحطة التابع لها (خاص بمندوبي المحطات)"
-    )
 
     REQUIRED_FIELDS = ['email', 'full_name', 'role']
 
@@ -56,7 +38,7 @@ class UserDevice(models.Model):
         related_name='devices',
         verbose_name="المستخدم"
     )
-    
+
     device_uuid   = models.CharField(max_length=255, db_index=True, verbose_name="البصمة الرقمية للجهاز")
     device_name   = models.CharField(max_length=100, blank=True, null=True, verbose_name="اسم الجهاز")
     is_verified   = models.BooleanField(default=True, verbose_name="هل الجهاز موثق؟")
