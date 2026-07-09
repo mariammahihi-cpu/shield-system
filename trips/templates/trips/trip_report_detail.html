@@ -1,0 +1,96 @@
+{% extends base_template|default:'auditor_base.html' %}
+{% block title %}تقرير الرحلة {{ trip.trip_code }}{% endblock %}
+{% block page_title %}<i class="fa-solid fa-file-contract text-blue-400"></i> تقرير التدقيق — {{ trip.trip_code }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    @media print {
+        body * { visibility: hidden; }
+        #report-area, #report-area * { visibility: visible; }
+        #report-area { position: absolute; inset: 0; background:#fff; color:#000; padding:20px; }
+        .no-print { display: none !important; }
+        #report-area .card { border:1px solid #ccc !important; background:#fff !important; color:#000 !important; }
+        #report-area .lbl { color:#555 !important; } #report-area .val { color:#000 !important; }
+    }
+</style>
+{% endblock %}
+
+{% block header_actions %}
+<button onclick="window.print()" class="no-print bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2">
+    <i class="fa-solid fa-print"></i> طباعة التقرير
+</button>
+{% endblock %}
+
+{% block content %}
+<div id="report-area" class="max-w-4xl mx-auto space-y-6">
+
+    <!-- ترويسة -->
+    <div class="card bg-slate-800 border border-slate-700 rounded-2xl p-6 flex items-center justify-between flex-wrap gap-3">
+        <div>
+            <div class="text-xs lbl text-slate-400">رمز الرحلة</div>
+            <div class="text-xl font-bold font-mono text-blue-400 val" dir="ltr">{{ trip.trip_code }}</div>
+        </div>
+        <span class="px-3 py-1.5 rounded-full text-xs font-bold border
+            {% if trip.status == 'suspect' %}bg-red-500/10 text-red-400 border-red-500/30
+            {% elif trip.status == 'completed' %}bg-emerald-500/10 text-emerald-400 border-emerald-500/30
+            {% else %}bg-blue-500/10 text-blue-400 border-blue-500/30{% endif %}">
+            {{ trip.get_status_display }}
+        </span>
+    </div>
+
+    <!-- بيانات الرحلة والشحنة -->
+    <div class="card bg-slate-800 border border-slate-700 rounded-2xl p-6">
+        <h2 class="font-bold mb-4 border-b border-slate-700 pb-3"><i class="fa-solid fa-truck-field text-blue-400"></i> بيانات الشحنة عند التحميل</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4 text-sm">
+            <div><div class="lbl text-slate-400 text-xs">المحطة</div><div class="val font-bold text-slate-200">{{ trip.station.station_name }}</div></div>
+            <div><div class="lbl text-slate-400 text-xs">المستودع</div><div class="val font-bold text-slate-200">{{ trip.warehouse.warehouse_name }}</div></div>
+            <div><div class="lbl text-slate-400 text-xs">الشاحنة / السائق</div><div class="val font-bold text-slate-200">{{ trip.truck.truck_id }} — {{ trip.truck.driver.driver_name }}</div></div>
+            <div><div class="lbl text-slate-400 text-xs">المندوب</div><div class="val font-bold text-slate-200">{{ trip.agent.full_name|default:trip.agent.username }}</div></div>
+            <div><div class="lbl text-slate-400 text-xs">الحجم القياسي المشحون (15°C)</div><div class="val font-bold text-slate-200">{{ trip.shipped_volume_15c }} لتر</div></div>
+            <div><div class="lbl text-slate-400 text-xs">الحرارة / الكثافة</div><div class="val font-bold text-slate-200">{{ trip.shipped_temperature }}°C / {{ trip.shipped_density }}</div></div>
+            <div><div class="lbl text-slate-400 text-xs">أرقام الأختام</div><div class="val font-bold text-slate-200 font-mono" dir="ltr">{{ trip.seal_numbers }}</div></div>
+            <div><div class="lbl text-slate-400 text-xs">تاريخ الإنشاء</div><div class="val font-bold text-slate-200">{{ trip.created_at|date:"Y-m-d H:i" }}</div></div>
+            <div><div class="lbl text-slate-400 text-xs">تاريخ الانطلاق</div><div class="val font-bold text-slate-200">{{ trip.departed_at|date:"Y-m-d H:i"|default:"—" }}</div></div>
+        </div>
+    </div>
+
+    {% if discharge_record %}
+    <!-- نتيجة التفريغ -->
+    <div class="card bg-slate-800 border border-slate-700 rounded-2xl p-6">
+        <h2 class="font-bold mb-4 border-b border-slate-700 pb-3"><i class="fa-solid fa-flask-vial text-emerald-400"></i> نتيجة التفريغ الميداني والحسابات</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4 text-sm">
+            <div><div class="lbl text-slate-400 text-xs">الحجم المفرّغ (15°C)</div><div class="val font-bold text-slate-200">{{ discharge_record.discharge_volume_15c }} لتر</div></div>
+            <div><div class="lbl text-slate-400 text-xs">الحرارة / الكثافة عند التفريغ</div><div class="val font-bold text-slate-200">{{ discharge_record.discharge_temperature }}°C / {{ discharge_record.discharge_density }}</div></div>
+            <div><div class="lbl text-slate-400 text-xs">فارق العجز</div><div class="val font-bold {% if discharge_record.variance_liters > 0 %}text-red-400{% else %}text-emerald-400{% endif %}">{{ discharge_record.variance_liters }} لتر ({{ discharge_record.variance_percent }}%)</div></div>
+            <div><div class="lbl text-slate-400 text-xs">النطاق الجغرافي</div><div class="val font-bold text-slate-200">{{ discharge_record.get_geofence_status_display }}</div></div>
+            <div><div class="lbl text-slate-400 text-xs">المسافة عن المحطة</div><div class="val font-bold text-slate-200">{{ discharge_record.scan_distance_m }} م</div></div>
+            <div><div class="lbl text-slate-400 text-xs">الأختام</div><div class="val font-bold {% if discharge_record.seal_check_passed %}text-emerald-400{% else %}text-red-400{% endif %}">{% if discharge_record.seal_check_passed %}مطابقة ✓{% else %}غير مطابقة ✗{% endif %}</div></div>
+            <div class="col-span-2 md:col-span-3"><div class="lbl text-slate-400 text-xs">إحداثيات التفريغ</div><div class="val font-bold text-slate-200 font-mono" dir="ltr">{{ discharge_record.scan_latitude }}, {{ discharge_record.scan_longitude }}</div></div>
+        </div>
+    </div>
+
+    <!-- الخلاصة -->
+    <div class="card rounded-2xl p-6 border {% if discharge_record.is_suspect %}bg-red-500/10 border-red-500/30{% else %}bg-emerald-500/10 border-emerald-500/30{% endif %}">
+        <h2 class="font-bold mb-2 {% if discharge_record.is_suspect %}text-red-400{% else %}text-emerald-400{% endif %}">
+            <i class="fa-solid {% if discharge_record.is_suspect %}fa-triangle-exclamation{% else %}fa-circle-check{% endif %}"></i>
+            الخلاصة: {% if discharge_record.is_suspect %}شحنة مشبوهة — تتطلّب مراجعة{% else %}شحنة سليمة{% endif %}
+        </h2>
+        {% if discharge_record.is_suspect %}
+        <ul class="text-sm text-slate-300 list-disc pr-5 space-y-1">
+            {% if discharge_record.geofence_status == 'red' %}<li>خرق النطاق الجغرافي الآمن.</li>{% endif %}
+            {% if not discharge_record.seal_check_passed %}<li>الأختام الأمنية غير مطابقة.</li>{% endif %}
+            {% if discharge_record.variance_percent > 0.5 %}<li>عجز حجمي يتجاوز الحد المسموح.</li>{% endif %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-slate-300">التفريغ مطابق للمعايير: داخل النطاق، أختام سليمة، عجز ضمن الحدود.</p>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="card bg-slate-800 border border-slate-700 rounded-2xl p-6 text-center text-slate-400">
+        <i class="fa-solid fa-hourglass-half text-2xl mb-2 block"></i>
+        لم يتم تفريغ هذه الشحنة بعد — لا توجد نتيجة تدقيق ميدانية.
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

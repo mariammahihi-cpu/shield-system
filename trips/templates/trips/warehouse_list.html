@@ -1,0 +1,72 @@
+{% extends base_template|default:'users/admin_base.html' %}
+{% block page_title %}<i class="fas fa-warehouse text-blue-400"></i> إدارة المستودعات{% endblock %}
+{% block header_actions %}
+<a href="{% url 'trips:warehouse_create' %}" class="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2">
+    <i class="fas fa-plus"></i> مستودع جديد
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+
+    <form method="get" class="mb-5">
+        <div class="relative">
+            <i class="fas fa-magnifying-glass absolute top-1/2 -translate-y-1/2 right-4 text-slate-500"></i>
+            <input type="text" name="q" value="{{ search|default:'' }}" placeholder="ابحث برمز المستودع أو الاسم أو المدينة..." class="sh-input w-full pr-11">
+        </div>
+    </form>
+
+    <div class="bg-slate-800/60 border border-slate-700 rounded-xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-right">
+                <thead class="bg-slate-900/70 text-slate-300 text-xs uppercase">
+                    <tr>
+                        <th class="px-4 py-3 font-semibold">المستودع</th>
+                        <th class="px-4 py-3 font-semibold">المدينة</th>
+                        <th class="px-4 py-3 font-semibold">العنوان</th>
+                        <th class="px-4 py-3 font-semibold">الحالة</th>
+                        <th class="px-4 py-3 font-semibold text-center">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-700/70">
+                    {% for w in warehouses %}
+                    <tr class="hover:bg-slate-700/30 transition {% if not w.is_active %}opacity-50{% endif %}">
+                        <td class="px-4 py-3">
+                            <div class="text-white font-medium">{{ w.warehouse_name }}</div>
+                            <div class="text-slate-500 text-xs" dir="ltr">{{ w.warehouse_code }}</div>
+                        </td>
+                        <td class="px-4 py-3 text-slate-300">{{ w.location_city }}</td>
+                        <td class="px-4 py-3 text-slate-400">{{ w.address_details|default:"—"|truncatechars:40 }}</td>
+                        <td class="px-4 py-3">
+                            {% if w.is_active %}
+                                <span class="inline-flex items-center gap-1.5 bg-emerald-500/15 text-emerald-400 text-xs font-medium px-2.5 py-1 rounded-full"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> نشط</span>
+                            {% else %}
+                                <span class="inline-flex items-center gap-1.5 bg-slate-500/20 text-slate-400 text-xs font-medium px-2.5 py-1 rounded-full"><i class="fas fa-box-archive"></i> مؤرشف</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center justify-center gap-2">
+                                <a href="{% url 'trips:warehouse_update' w.id %}" class="text-slate-400 hover:text-blue-400 transition" title="تعديل"><i class="fas fa-pen-to-square"></i></a>
+                                <form method="post" action="{% url 'trips:warehouse_archive' w.id %}" class="inline"
+                                      data-confirm-title="{% if w.is_active %}أرشفة المستودع{% else %}استعادة المستودع{% endif %}"
+                                      data-confirm="هل أنت متأكد من {% if w.is_active %}أرشفة{% else %}استعادة{% endif %} مستودع {{ w.warehouse_name }}؟"
+                                      data-confirm-icon="{% if w.is_active %}fa-box-archive{% else %}fa-rotate-left{% endif %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="transition {% if w.is_active %}text-slate-400 hover:text-red-400{% else %}text-slate-500 hover:text-emerald-400{% endif %}" title="{% if w.is_active %}أرشفة{% else %}استعادة{% endif %}">
+                                        <i class="fas {% if w.is_active %}fa-box-archive{% else %}fa-rotate-left{% endif %}"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="px-4 py-12 text-center text-slate-500"><i class="fas fa-warehouse text-3xl mb-3 block"></i>
+                        {% if search %}لا توجد نتائج مطابقة لبحثك «{{ search }}».{% else %}لا توجد مستودعات مسجّلة بعد.{% endif %}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if warehouses %}<p class="text-slate-500 text-xs mt-3">إجمالي المستودعات المعروضة: {{ warehouses|length }}</p>{% endif %}
+</div>
+{% endblock %}

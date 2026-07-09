@@ -51,7 +51,9 @@ def alert_detail(request, pk):
         return redirect('dashboard:home')
 
     alert = get_object_or_404(
-        Alert.objects.select_related('trip__station', 'trip__truck', 'trip__driver', 'trip__discharge'),
+        Alert.objects.select_related(
+            'trip__station', 'trip__truck', 'trip__truck__driver', 'trip__discharge_record'
+        ),
         pk=pk
     )
     correction_requests = alert.correction_requests.select_related('requested_by').order_by('-created_at')
@@ -155,3 +157,64 @@ def review_correction_request(request, pk):
         return redirect('alerts:alert_detail', pk=correction.alert.pk)
 
     return redirect('alerts:alert_detail', pk=correction.alert.pk)
+#الاشعارات 
+@login_required
+def notifications(request):
+    """عرض الإشعارات العامة حسب الدور، وتعليمها كمقروءة عند الفتح."""
+    role = request.user.role
+    qs = Alert.objects.select_related('trip').order_by('-created_at')
+
+    if role == 'agent':
+        qs = qs.filter(trip__agent=request.user)
+    elif role == 'dispatcher':
+        qs = qs.filter(trip__dispatcher=request.user)
+    # manager / admin / auditor: يرون كل الإشعارات
+
+    alerts = list(qs)   # نجلبها قبل تحديث وقت الاطّلاع
+
+    # ✅ تعليمها كمقروءة → العدّاد يصير صفر
+    request.user.notifications_seen_at = timezone.now()
+    request.user.save(update_fields=['notifications_seen_at'])
+
+    return render(request, 'alerts/notifications.html', {'alerts': alerts})
+@login_required
+def request_thermal_correction(request, trip_id):
+    """المندوب/الموظف يقدّم طلب تصحيح حراري على رحلة مشبوهة."""
+    from trips.models import Trip
+    if request.user.role not in ('agent', 'dispatcher'):
+        messages.error(request, 'ليس لديك صلاحية.')
+        return redirect('dashboard:home')
+    if request.method != 'POST':
+        return redirect('trips:discharge_log')
+
+    trip = get_object_or_404(Trip, pk=trip_id)
+    if request.user.role == 'agent' and trip.agent != request.user:
+        messages.error(request, 'غير مصرح: هذه الرحلة ليست من توثيقك.')
+        return redirect('trips:discharge_log')
+
+    reason = request.POST.get('reason', '').strip()
+    if not reason:
+        messages.error(request, 'يجب إدخال سبب طلب التصحيح الحراري.')
+        return redirect('trips:discharge_log')
+
+    # إيجاد إنذار مفتوح للرحلة أو إنشاؤه (لربط الطلب به)
+    alert = Alert.objects.filter(trip=trip, is_resolved=False).first()
+    if not alert:
+        alert = Alert.objects.create(
+            trip=trip, alert_type='volume_variance', severity='medium',
+            description=f'طلب تصحيح حراري من المندوب على الرحلة {trip.trip_code}.',
+        )
+
+    # منع طلب مكرّر معلّق
+    if CorrectionRequest.objects.filter(alert=alert, status='pending').exists():
+        messages.warning(request, 'يوجد طلب تصحيح معلّق بالفعل لهذه الرحلة.')
+        return redirect('trips:discharge_log')
+
+    CorrectionRequest.objects.create(alert=alert, requested_by=request.user, reason=reason)
+    AuditLog.objects.create(
+        user=request.user, action='submit_correction_request',
+        target_table='shield_alerts', target_id=alert.id,
+        new_value=reason, ip_address=_get_ip(request),
+    )
+    messages.success(request, '✅ تم إرسال طلب التصحيح الحراري للمراجعة بنجاح.')
+    return redirect('trips:discharge_log')

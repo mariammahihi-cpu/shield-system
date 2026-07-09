@@ -8,10 +8,12 @@ class AdminAction(models.Model):
         ('suspend',      'تجميد مؤقت'),
         ('unlock',       'إلغاء قفل الحساب'),
         ('reset_device', 'إعادة تعيين جهاز معتمد'),
+        ('auto_lock',    'قفل تلقائي (محاولات فاشلة)'),   # ← جديد
     ]
 
     target_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='bans_received')
-    admin_user  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='actions_taken')
+    admin_user  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='actions_taken',
+                                    null=True, blank=True)   # ← صار يقبل null (للقفل التلقائي)
     action_type = models.CharField(max_length=20, choices=ACTION_CHOICES)
     reason      = models.TextField(verbose_name="المبرر الإداري")
     is_active   = models.BooleanField(default=True, verbose_name="هل الإجراء سارٍ؟")
@@ -23,6 +25,7 @@ class AdminAction(models.Model):
     class Meta:
         db_table = 'shield_admin_actions'
         verbose_name = 'إجراء إداري'
+        ordering = ['-created_at']   # ← الأحدث أولاً
 
 
 class AuditLog(models.Model):

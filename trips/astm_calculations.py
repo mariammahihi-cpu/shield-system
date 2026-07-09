@@ -39,4 +39,4 @@ def compute_standard_volume(product_type: str, observed_volume: float, observed_
     """
     vcf = calculate_astm_vcf(product_type, observed_temp, density_15c)
     standard_volume = observed_volume * vcf
-    return round(standard_volume, 2)
+    return round(standard_volume, 2) 

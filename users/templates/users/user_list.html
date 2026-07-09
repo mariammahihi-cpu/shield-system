@@ -1,0 +1,298 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}إدارة المستخدمين{% endblock %}
+
+{% block page_title %}
+    <i class="fas fa-users-gear text-blue-400"></i> إدارة المستخدمين
+{% endblock %}
+
+{% block header_actions %}
+    <a href="{% url 'users:create_user' %}"
+       class="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2">
+        <i class="fas fa-user-plus"></i> مستخدم جديد
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+
+    <!-- بحث وفلترة -->
+    <form method="get" class="mb-6 flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-1">
+            <i class="fas fa-magnifying-glass absolute top-1/2 -translate-y-1/2 right-4 text-slate-500"></i>
+            <input type="text" name="q" value="{{ search }}" placeholder="بحث بالاسم أو اسم المستخدم..."
+                   class="sh-input w-full pr-11">
+        </div>
+        <select name="role" class="sh-input sm:w-56" onchange="this.form.submit()">
+            <option value="">كل الأدوار</option>
+            {% for val, label in role_choices %}
+            <option value="{{ val }}" {% if role_filter == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button class="bg-blue-600 hover:bg-blue-700 transition px-5 py-2.5 rounded-lg text-sm font-semibold whitespace-nowrap">
+            <i class="fas fa-search ml-1"></i> بحث
+        </button>
+    </form>
+
+    <!-- جدول المستخدمين -->
+    <div class="bg-slate-800/60 border border-slate-700 rounded-xl overflow-hidden">
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm text-right">
+            <thead class="bg-slate-900/70 text-slate-300 uppercase text-xs">
+                <tr>
+                    <th class="px-4 py-3 font-semibold">المستخدم</th>
+                    <th class="px-4 py-3 font-semibold">الدور</th>
+                    <th class="px-4 py-3 font-semibold">الحالة</th>
+                    <th class="px-4 py-3 font-semibold">الأجهزة</th>
+                    <th class="px-4 py-3 font-semibold text-center">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-700/70">
+            {% for u in users %}
+                <tr class="hover:bg-slate-700/30 transition {% if not u.is_active or u.is_locked %}opacity-60{% endif %}">
+                    <!-- المستخدم -->
+                    <td class="px-4 py-3">
+                        <button type="button" onclick="openUserPanel('{{ u.id }}')" class="flex items-center gap-3 text-right group">
+                            <span class="shrink-0 w-9 h-9 rounded-full bg-blue-600/20 border border-blue-500/30 text-blue-300 flex items-center justify-center font-bold">
+                                {{ u.full_name|default:u.username|first|upper }}
+                            </span>
+                            <span>
+                                <span class="block font-semibold text-blue-300 group-hover:text-blue-200 transition">{{ u.full_name|default:u.username }}</span>
+                                <span class="block text-slate-500 text-xs" dir="ltr">@{{ u.username }}</span>
+                            </span>
+                        </button>
+                    </td>
+
+                    <!-- الدور -->
+                    <td class="px-4 py-3">
+                        <span class="inline-flex items-center bg-blue-500/15 text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-full text-xs font-medium">
+                            {{ u.get_role_display }}
+                        </span>
+                    </td>
+
+                    <!-- الحالة -->
+                    <td class="px-4 py-3">
+                        {% if u.is_locked %}
+                            <span class="inline-flex items-center gap-1.5 bg-red-500/15 text-red-400 px-2.5 py-1 rounded-full text-xs font-medium"><i class="fas fa-lock"></i> محظور</span>
+                        {% elif u.is_active %}
+                            <span class="inline-flex items-center gap-1.5 bg-emerald-500/15 text-emerald-400 px-2.5 py-1 rounded-full text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> نشط</span>
+                        {% else %}
+                            <span class="inline-flex items-center gap-1.5 bg-slate-500/20 text-slate-400 px-2.5 py-1 rounded-full text-xs font-medium"><i class="fas fa-pause text-[10px]"></i> موقوف</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- الأجهزة (مع علامة "يحتاج اعتماد") -->
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            {% with devices=u.browser_sessions.all %}
+                                {% if devices %}
+                                    <span class="inline-flex items-center gap-1.5 text-slate-300 text-xs">
+                                        <i class="fas fa-mobile-screen text-slate-400"></i> {{ devices|length }}
+                                    </span>
+                                {% else %}<span class="text-slate-600 text-xs">—</span>{% endif %}
+                            {% endwith %}
+
+                            {% if u.untrusted_count %}
+                                <button type="button" onclick="openUserPanel('{{ u.id }}')"
+                                        class="inline-flex items-center gap-1 bg-red-500/15 text-red-400 text-[11px] font-medium px-2 py-0.5 rounded-full hover:bg-red-500/25 transition"
+                                        title="فتح لاعتماد الأجهزة">
+                                    <i class="fas fa-shield-halved"></i> يحتاج اعتماد
+                                </button>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <!-- إجراءات -->
+                    <td class="px-4 py-3">
+                        <div class="flex items-center justify-center gap-3">
+                            <!-- تفعيل/إيقاف (المودال العام) -->
+                            <form method="post" action="{% url 'users:toggle_active' u.id %}" class="inline"
+                                  data-confirm-title="{% if u.is_active %}إيقاف الحساب{% else %}تفعيل الحساب{% endif %}"
+                                  data-confirm="هل أنت متأكد من {% if u.is_active %}إيقاف{% else %}تفعيل{% endif %} حساب {{ u.full_name|default:u.username }}؟"
+                                  data-confirm-icon="fa-power-off">
+                                {% csrf_token %}
+                                <button type="submit" class="text-yellow-400 hover:text-yellow-300 transition" title="تفعيل/إيقاف"><i class="fas fa-power-off"></i></button>
+                            </form>
+
+                            <!-- حظر / فك حظر -->
+                            {% if u.is_locked %}
+                                <form method="post" action="{% url 'users:toggle_ban' u.id %}" class="inline"
+                                      data-confirm-title="فك حظر الحساب" data-confirm-icon="fa-unlock"
+                                      data-confirm="فك الحظر عن حساب {{ u.full_name|default:u.username }}؟">
+                                    {% csrf_token %}
+                                    <button type="submit" class="text-green-400 hover:opacity-80 transition" title="فك الحظر"><i class="fas fa-unlock"></i></button>
+                                </form>
+                            {% else %}
+                                <button type="button"
+                                        onclick="openBanModal('{% url 'users:toggle_ban' u.id %}', '{{ u.full_name|default:u.username|escapejs }}')"
+                                        class="text-red-400 hover:opacity-80 transition" title="حظر"><i class="fas fa-ban"></i></button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="5" class="px-4 py-12 text-center text-slate-500">
+                    <i class="fas fa-users-slash text-3xl mb-3 block"></i>
+                    {% if search or role_filter %}لا توجد نتائج مطابقة.{% else %}لا يوجد مستخدمون.{% endif %}
+                </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    {% if users %}<p class="text-slate-500 text-xs mt-3">إجمالي المستخدمين المعروضين: {{ users|length }}</p>{% endif %}
+</div>
+
+{# ===== كتل تفاصيل مخفية لكل مستخدم (تُحقن في اللوحة الجانبية) ===== #}
+{% for u in users %}
+<template id="paneldata-{{ u.id }}">
+    <div class="space-y-4">
+        <div class="flex items-center gap-3">
+            <span class="w-12 h-12 rounded-full bg-blue-600/20 border border-blue-500/30 text-blue-300 flex items-center justify-center text-xl font-bold">
+                {{ u.full_name|default:u.username|first|upper }}
+            </span>
+            <div>
+                <div class="font-semibold text-lg">{{ u.full_name|default:"—" }}</div>
+                <div class="text-slate-500 text-xs" dir="ltr">@{{ u.username }}</div>
+            </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+            <div><div class="text-slate-400 text-xs">الدور</div><div>{{ u.get_role_display }}</div></div>
+            <div><div class="text-slate-400 text-xs">الرقم الوطني</div><div class="font-mono">{{ u.national_id|default:"—" }}</div></div>
+            <div><div class="text-slate-400 text-xs">الهاتف</div><div class="font-mono" dir="ltr">{{ u.phone_number|default:"—" }}</div></div>
+            <div><div class="text-slate-400 text-xs">آخر دخول</div><div>{{ u.last_login|date:"Y/m/d H:i"|default:"—" }}</div></div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-700">
+            <div class="text-slate-400 text-xs mb-1">الربط التشغيلي</div>
+            {% if u.role == 'dispatcher' %}
+                {% for w in u.assigned_warehouses.all %}<div class="text-sm"><i class="fas fa-warehouse text-blue-400"></i> {{ w.warehouse_name }}</div>{% empty %}<div class="text-amber-400 text-sm">⚠️ غير مرتبط بمستودع</div>{% endfor %}
+            {% elif u.role == 'agent' %}
+                {% for s in u.assigned_stations.all %}<div class="text-sm"><i class="fas fa-gas-pump text-blue-400"></i> {{ s.station_name }}</div>{% empty %}<div class="text-amber-400 text-sm">⚠️ غير مرتبط بمحطة</div>{% endfor %}
+            {% else %}<div class="text-slate-500 text-sm">—</div>{% endif %}
+        </div>
+
+        <div class="pt-3 border-t border-slate-700">
+            <div class="text-slate-400 text-xs mb-2">الأجهزة المربوطة</div>
+            {% for d in u.browser_sessions.all %}
+                <div class="bg-slate-900 border border-slate-700 rounded-lg p-3 mb-2">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs truncate max-w-[170px]" title="{{ d.user_agent }}">{{ d.user_agent|truncatechars:32 }}</span>
+                        {% if d.is_trusted %}
+                            <span class="text-green-400 text-xs"><i class="fas fa-shield-halved"></i> موثوق</span>
+                        {% else %}
+                            <span class="text-red-400 text-xs"><i class="fas fa-shield-halved"></i> غير موثوق</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-slate-500 text-[11px] mb-2">آخر استخدام: {{ d.last_used_at|date:"Y/m/d H:i" }}</div>
+
+                    <form method="post" action="{% url 'users:toggle_device_trust' d.id %}"
+                          data-confirm-title="{% if d.is_trusted %}سحب ثقة الجهاز{% else %}اعتماد الجهاز{% endif %}"
+                          data-confirm="{% if d.is_trusted %}سحب الثقة من هذا الجهاز؟ لن يستطيع التفريغ منه.{% else %}اعتماد هذا الجهاز للتفريغ؟{% endif %}"
+                          data-confirm-icon="fa-shield-halved">
+                        {% csrf_token %}
+                        {% if d.is_trusted %}
+                            <button class="w-full bg-red-600/80 hover:bg-red-600 transition py-1.5 rounded-lg text-xs font-semibold"><i class="fas fa-ban ml-1"></i> سحب الثقة</button>
+                        {% else %}
+                            <button class="w-full bg-green-600/80 hover:bg-green-600 transition py-1.5 rounded-lg text-xs font-semibold"><i class="fas fa-circle-check ml-1"></i> اعتماد الجهاز</button>
+                        {% endif %}
+                    </form>
+                </div>
+            {% empty %}<div class="text-slate-500 text-sm">لا توجد أجهزة مسجلة بعد.</div>{% endfor %}
+        </div>
+
+        {# ===== سجل الإجراءات الإدارية (سبب الحظر) ===== #}
+        <div class="pt-3 border-t border-slate-700">
+            <div class="text-slate-400 text-xs mb-2">سجل الإجراءات الإدارية (سبب الحظر)</div>
+            {% for a in u.bans_received.all %}
+                <div class="bg-slate-900 border border-slate-700 rounded-lg p-3 mb-2 text-xs">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="font-semibold {% if a.is_active %}text-red-400{% else %}text-slate-400{% endif %}">
+                            {{ a.get_action_type_display }}{% if a.is_active %} — سارٍ{% endif %}
+                        </span>
+                        <span class="text-slate-500">{{ a.created_at|date:"Y/m/d H:i" }}</span>
+                    </div>
+                    <div class="text-slate-300">{{ a.reason }}</div>
+                    <div class="text-slate-500 mt-1">
+                        بواسطة: {% if a.admin_user %}{{ a.admin_user.full_name|default:a.admin_user.username }}{% else %}النظام (تلقائي){% endif %}
+                    </div>
+                </div>
+            {% empty %}
+                <div class="text-slate-500 text-sm">لا توجد إجراءات إدارية على هذا الحساب.</div>
+            {% endfor %}
+        </div>
+    </div>
+</template>
+{% endfor %}
+
+{# ===== اللوحة الجانبية ===== #}
+<div id="userPanelOverlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeUserPanel()"></div>
+<aside id="userPanel" class="fixed top-0 left-0 h-full w-full max-w-md bg-slate-800 border-l border-slate-700 shadow-2xl z-50 transition-transform duration-300 overflow-y-auto" style="transform: translateX(-100%);">
+    <div class="h-16 flex items-center justify-between px-6 border-b border-slate-700">
+        <h3 class="font-bold flex items-center gap-2"><i class="fas fa-id-card text-blue-400"></i> تفاصيل المستخدم</h3>
+        <button onclick="closeUserPanel()" class="text-slate-400 hover:text-white"><i class="fas fa-xmark text-lg"></i></button>
+    </div>
+    <div id="userPanelBody" class="p-6"></div>
+</aside>
+
+{# ===== مودال الحظر (يجمع المبرّر الإلزامي) ===== #}
+<form id="banForm" method="post" class="hidden">{% csrf_token %}<input type="hidden" name="reason" id="banReasonHidden"></form>
+
+<div id="banModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[105] hidden items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="bg-red-500/15 text-red-400 p-2.5 rounded-xl"><i class="fas fa-ban text-lg"></i></div>
+            <h3 class="text-lg font-bold text-slate-100">حظر الحساب</h3>
+        </div>
+        <p id="banModalUser" class="text-slate-400 text-sm mb-4"></p>
+        <label class="block text-slate-300 text-sm mb-2">المبرّر الإداري <span class="text-red-400">*</span></label>
+        <textarea id="banReasonInput" rows="3" class="sh-input resize-none" placeholder="اكتب سبب الحظر بوضوح..."></textarea>
+        <p id="banError" class="text-red-400 text-xs mt-1 hidden">⚠️ يجب إدخال مبرّر للحظر.</p>
+        <div class="flex gap-3 mt-5">
+            <button type="button" onclick="submitBan()" class="flex-1 bg-red-600 hover:bg-red-700 transition py-2.5 rounded-lg font-semibold text-white"><i class="fas fa-ban ml-1"></i> تأكيد الحظر</button>
+            <button type="button" onclick="closeBanModal()" class="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 transition rounded-lg">إلغاء</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    // ===== اللوحة الجانبية =====
+    function openUserPanel(id) {
+        const tpl = document.getElementById('paneldata-' + id);
+        document.getElementById('userPanelBody').innerHTML = tpl.innerHTML;
+        document.getElementById('userPanelOverlay').classList.remove('hidden');
+        document.getElementById('userPanel').style.transform = 'translateX(0)';
+    }
+    function closeUserPanel() {
+        document.getElementById('userPanelOverlay').classList.add('hidden');
+        document.getElementById('userPanel').style.transform = 'translateX(-100%)';
+    }
+
+    // ===== مودال الحظر (مبرّر إلزامي) =====
+    let banAction = '';
+    function openBanModal(action, name) {
+        banAction = action;
+        document.getElementById('banModalUser').textContent = 'المستخدم: ' + name;
+        document.getElementById('banReasonInput').value = '';
+        document.getElementById('banError').classList.add('hidden');
+        const m = document.getElementById('banModal');
+        m.classList.remove('hidden'); m.classList.add('flex');
+        document.getElementById('banReasonInput').focus();
+    }
+    function closeBanModal() {
+        const m = document.getElementById('banModal');
+        m.classList.add('hidden'); m.classList.remove('flex');
+    }
+    function submitBan() {
+        const reason = document.getElementById('banReasonInput').value.trim();
+        if (!reason) { document.getElementById('banError').classList.remove('hidden'); return; }
+        document.getElementById('banReasonHidden').value = reason;
+        const f = document.getElementById('banForm');
+        f.action = banAction; f.submit();
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeBanModal(); closeUserPanel(); } });
+</script>
+{% endblock %}

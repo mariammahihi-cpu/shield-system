@@ -1,0 +1,75 @@
+{% extends base_template|default:'users/admin_base.html' %}
+{% load static %}
+
+{% block page_title %}
+    {% if form.instance.pk %}تعديل بيانات السائق{% else %}إضافة سائق جديد{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+
+    <!-- الترويسة -->
+    <div class="flex items-center gap-3 mb-6">
+        <a href="{% url 'trips:driver_list' %}"
+           class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white transition-colors" title="رجوع">
+            <i class="fas fa-arrow-right"></i>
+        </a>
+        <div>
+            <h1 class="text-2xl font-bold text-white flex items-center gap-3">
+                <i class="fas fa-id-card-clip text-sky-400"></i>
+                {% if form.instance.pk %}تعديل بيانات السائق{% else %}إضافة سائق جديد{% endif %}
+            </h1>
+            <p class="text-slate-400 text-sm mt-1">
+                {% if form.instance.pk %}تحديث بيانات «{{ form.instance.driver_name }}»{% else %}تسجيل سائق جديد في النظام{% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- النموذج -->
+    <form method="post" class="bg-slate-800/60 border border-slate-700 rounded-xl p-6">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="mb-5 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {% for field in form %}
+                {% if field.field.widget.input_type == 'checkbox' %}
+                    <div class="sm:col-span-2 flex items-center gap-3 py-2">
+                        {{ field }}
+                        <label for="{{ field.id_for_label }}" class="text-slate-200 text-sm font-medium select-none cursor-pointer">
+                            {{ field.label }}
+                        </label>
+                    </div>
+                {% else %}
+                    <div>
+                        <label for="{{ field.id_for_label }}" class="block text-slate-300 text-sm font-medium mb-1.5">
+                            {{ field.label }}
+                            {% if field.field.required %}<span class="text-red-400">*</span>{% endif %}
+                        </label>
+                        {{ field }}
+                        {% if field.help_text %}<p class="text-slate-500 text-xs mt-1">{{ field.help_text }}</p>{% endif %}
+                        {% for e in field.errors %}<p class="text-red-400 text-xs mt-1">{{ e }}</p>{% endfor %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- الأزرار -->
+        <div class="flex items-center gap-3 mt-7 pt-5 border-t border-slate-700">
+            <button type="submit"
+                    class="inline-flex items-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors">
+                <i class="fas fa-floppy-disk"></i>
+                {% if form.instance.pk %}حفظ التعديلات{% else %}إضافة السائق{% endif %}
+            </button>
+            <a href="{% url 'trips:driver_list' %}"
+               class="px-6 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold transition-colors">
+                إلغاء
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

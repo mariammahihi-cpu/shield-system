@@ -1,0 +1,79 @@
+{% extends base_template|default:'auditor_base.html' %}
+{% block title %}الشحنات المشبوهة{% endblock %}
+{% block page_title %}<i class="fa-solid fa-magnifying-glass-chart text-red-400"></i> حصر وتحليل الشحنات المشبوهة{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- بطاقات المؤشرات -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 flex items-center gap-4">
+            <div class="bg-red-500/15 text-red-400 w-12 h-12 rounded-xl flex items-center justify-center text-xl"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div><div class="text-2xl font-bold">{{ total_suspect }}</div><div class="text-xs text-slate-400">إجمالي المشبوهة</div></div>
+        </div>
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 flex items-center gap-4">
+            <div class="bg-orange-500/15 text-orange-400 w-12 h-12 rounded-xl flex items-center justify-center text-xl"><i class="fa-solid fa-location-dot"></i></div>
+            <div><div class="text-2xl font-bold">{{ geofence_suspect }}</div><div class="text-xs text-slate-400">خرق جغرافي (GPS)</div></div>
+        </div>
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 flex items-center gap-4">
+            <div class="bg-amber-500/15 text-amber-400 w-12 h-12 rounded-xl flex items-center justify-center text-xl"><i class="fa-solid fa-lock-open"></i></div>
+            <div><div class="text-2xl font-bold">{{ seal_suspect }}</div><div class="text-xs text-slate-400">أختام غير مطابقة</div></div>
+        </div>
+    </div>
+
+    <!-- الجدول -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow-xl">
+        <div class="p-4 border-b border-slate-700"><h2 class="font-bold flex items-center gap-2"><i class="fa-solid fa-list text-red-400"></i> سجل الشحنات المشبوهة</h2></div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-right">
+                <thead class="bg-slate-900/60 text-slate-400 uppercase text-xs">
+                    <tr>
+                        <th class="px-4 py-3">رمز الرحلة</th>
+                        <th class="px-4 py-3">المحطة</th>
+                        <th class="px-4 py-3">المندوب</th>
+                        <th class="px-4 py-3">الحجم المفرّغ</th>
+                        <th class="px-4 py-3">العجز</th>
+                        <th class="px-4 py-3">المسافة</th>
+                        <th class="px-4 py-3">سبب الاشتباه</th>
+                        <th class="px-4 py-3">الوقت</th>
+                        {% if request.user.role != 'agent' %}<th class="px-4 py-3 text-center">تفاصيل</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-700">
+                {% for r in suspect_records %}
+                    <tr class="hover:bg-slate-700/30 transition">
+                        <td class="px-4 py-3 font-mono font-bold text-blue-400" dir="ltr">{{ r.trip.trip_code }}</td>
+                        <td class="px-4 py-3 text-slate-200">{{ r.trip.station.station_name }}</td>
+                        <td class="px-4 py-3 text-slate-300">{{ r.agent.full_name|default:r.agent.username }}</td>
+                        <td class="px-4 py-3 text-slate-300">{{ r.discharge_volume_15c|floatformat:0 }} لتر</td>
+                        <td class="px-4 py-3 {% if r.variance_liters > 0 %}text-red-400{% else %}text-emerald-400{% endif %}">
+                            {{ r.variance_liters|floatformat:1 }} ({{ r.variance_percent }}%)
+                        </td>
+                        <td class="px-4 py-3 text-slate-400">{{ r.scan_distance_m|floatformat:0 }} م</td>
+                        <td class="px-4 py-3">
+                            <div class="flex flex-wrap gap-1">
+                                {% if r.geofence_status == 'red' %}<span class="bg-orange-500/15 text-orange-300 text-[11px] px-2 py-0.5 rounded-full">خرق جغرافي</span>{% endif %}
+                                {% if not r.seal_check_passed %}<span class="bg-amber-500/15 text-amber-300 text-[11px] px-2 py-0.5 rounded-full">أختام</span>{% endif %}
+                                {% if r.variance_percent > 0.5 %}<span class="bg-red-500/15 text-red-300 text-[11px] px-2 py-0.5 rounded-full">عجز حجمي</span>{% endif %}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-xs text-slate-400">{{ r.created_at|date:"Y/m/d H:i" }}</td>
+                        {% if request.user.role != 'agent' %}
+                        <td class="px-4 py-3 text-center">
+                            <a href="{% url 'trips:trip_report_detail' r.trip.id %}" class="text-blue-400 hover:text-blue-300" title="التقرير المفصّل"><i class="fa-solid fa-eye"></i></a>
+                        </td>
+                        {% endif %}
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="9" class="px-4 py-12 text-center text-slate-500">
+                        <i class="fa-solid fa-shield-halved text-3xl mb-2 block text-emerald-500/40"></i>
+                        لا توجد شحنات مشبوهة — الوضع سليم ✅
+                    </td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

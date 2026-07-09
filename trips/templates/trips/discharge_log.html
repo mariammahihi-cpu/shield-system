@@ -1,0 +1,124 @@
+{% extends 'agent_base.html' %}
+
+{% block title %}سجل التفريغ{% endblock %}
+
+{% block page_title %}
+    <i class="fa-solid fa-flask-vial text-emerald-500"></i>
+    سجل عمليات التفريغ الموثّقة
+{% endblock %}
+
+{% block content %}
+<section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+    <div class="flex items-center justify-between mb-6 border-b border-slate-700 pb-3">
+        <h2 class="text-lg font-bold">سجلاتك السابقة</h2>
+        <span class="bg-slate-900 px-3 py-1 rounded-lg text-xs font-mono text-slate-400 border border-slate-700">
+            الإجمالي: {{ records.count }}
+        </span>
+    </div>
+
+    <div class="overflow-x-auto rounded-xl border border-slate-700 bg-slate-900">
+        <table class="w-full text-right text-sm">
+            <thead class="bg-slate-800 text-slate-300 uppercase text-xs border-b border-slate-700">
+                <tr>
+                    <th class="px-6 py-4">رمز الرحلة</th>
+                    <th class="px-6 py-4">المحطة</th>
+                    <th class="px-6 py-4">الحجم المفرغ (15°C)</th>
+                    <th class="px-6 py-4">فارق العجز</th>
+                    <th class="px-6 py-4 text-center">النطاق الجغرافي</th>
+                    <th class="px-6 py-4 text-center">الحالة</th>
+                    <th class="px-6 py-4">تاريخ الانطلاق</th>
+                    <th class="px-6 py-4">وقت التفريغ</th>
+                    <th class="px-6 py-4 text-center">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+                {% for record in records %}
+                <tr class="hover:bg-slate-800/50 transition-colors">
+                    <td class="px-6 py-4 font-mono font-bold text-blue-400 tracking-wider">{{ record.trip.trip_code }}</td>
+                    <td class="px-6 py-4 text-slate-200">{{ record.trip.station.station_name }}</td>
+                    <td class="px-6 py-4 text-slate-200">{{ record.discharge_volume_15c }} لتر</td>
+                    <td class="px-6 py-4 {% if record.variance_liters > 0 %}text-red-400{% else %}text-emerald-400{% endif %}">
+                        {{ record.variance_liters }} لتر ({{ record.variance_percent }}%)
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="px-3 py-1 rounded-full text-xs font-medium border inline-block
+                            {% if record.geofence_status == 'green' %}bg-emerald-500/10 text-emerald-400 border-emerald-500/20
+                            {% elif record.geofence_status == 'yellow' %}bg-yellow-500/10 text-yellow-400 border-yellow-500/20
+                            {% else %}bg-red-500/10 text-red-400 border-red-500/20{% endif %}">
+                            {{ record.get_geofence_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        {% if record.is_suspect %}
+                        <span class="px-3 py-1 rounded-full text-xs font-medium border bg-red-500/10 text-red-400 border-red-500/20">مشبوهة</span>
+                        {% else %}
+                        <span class="px-3 py-1 rounded-full text-xs font-medium border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">سليمة</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-xs text-slate-400">{{ record.trip.departed_at|date:"Y-m-d H:i"|default:"—" }}</td>
+                    <td class="px-6 py-4 text-xs text-slate-400">{{ record.created_at|date:"Y-m-d H:i" }}</td>
+                    <td class="px-6 py-4 text-center">
+                        {% if record.is_suspect %}
+                        <button type="button"
+                                onclick="openCorrection('{% url 'alerts:request_thermal_correction' record.trip.id %}', '{{ record.trip.trip_code|escapejs }}')"
+                                class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg whitespace-nowrap">
+                            <i class="fa-solid fa-temperature-half"></i> طلب تصحيح
+                        </button>
+                        {% else %}
+                        <span class="text-slate-600 text-xs">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="px-6 py-12 text-center text-slate-500">
+                        <div class="flex flex-col items-center gap-2">
+                            <i class="fa-solid fa-folder-open text-3xl opacity-40"></i>
+                            <p>لا توجد عمليات تفريغ موثّقة بعد.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- مودال طلب التصحيح الحراري -->
+<div id="correctionModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[105] hidden items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div class="flex items-center gap-3 mb-3">
+            <div class="bg-amber-500/15 text-amber-400 p-2.5 rounded-xl"><i class="fa-solid fa-temperature-half text-lg"></i></div>
+            <h3 class="text-lg font-bold text-white">طلب تصحيح حراري</h3>
+        </div>
+        <p id="correctionDesc" class="text-slate-400 text-sm mb-4"></p>
+        <form id="correctionForm" method="post">
+            {% csrf_token %}
+            <label class="block text-slate-300 text-sm mb-2">سبب الطلب <span class="text-red-400">*</span></label>
+            <textarea name="reason" rows="3" required class="sh-input resize-none mb-4"
+                      placeholder="اشرح سبب العجز (مثال: انكماش حراري بسبب انخفاض الحرارة عند التفريغ)..."></textarea>
+            <div class="flex gap-3">
+                <button type="submit" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 rounded-lg">إرسال الطلب</button>
+                <button type="button" onclick="closeCorrection()" class="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openCorrection(url, code) {
+        document.getElementById('correctionForm').action = url;
+        document.getElementById('correctionDesc').textContent = 'الرحلة: ' + code;
+        const m = document.getElementById('correctionModal');
+        m.classList.remove('hidden'); m.classList.add('flex');
+        m.querySelector('textarea').focus();
+    }
+    function closeCorrection() {
+        const m = document.getElementById('correctionModal');
+        m.classList.add('hidden'); m.classList.remove('flex');
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCorrection(); });
+</script>
+{% endblock %}

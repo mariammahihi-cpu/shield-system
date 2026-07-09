@@ -1,0 +1,117 @@
+{% extends base_template|default:'admin_base.html' %}
+
+{% block title %}الإنذارات{% endblock %}
+
+{% block page_title %}
+    <i class="fa-solid fa-bell text-amber-400"></i>
+    إدارة الإنذارات والخرقات الأمنية
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+
+    <div class="grid grid-cols-2 gap-6">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 flex items-center gap-5">
+            <div class="bg-amber-500/15 text-amber-400 w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0"><i class="fa-solid fa-bell"></i></div>
+            <div>
+                <div class="text-3xl font-bold leading-none text-amber-400">{{ open_count }}</div>
+                <div class="text-sm text-slate-400 mt-2">إنذارات مفتوحة</div>
+            </div>
+        </div>
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 flex items-center gap-5">
+            <div class="bg-red-500/15 text-red-400 w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div>
+                <div class="text-3xl font-bold leading-none text-red-400">{{ critical_count }}</div>
+                <div class="text-sm text-slate-400 mt-2">إنذارات حرجة مفتوحة</div>
+            </div>
+        </div>
+    </div>
+
+    <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div class="flex flex-col gap-2">
+                <label class="text-xs text-slate-400">درجة الخطورة</label>
+                <select name="severity" class="sh-input">
+                    <option value="">الكل</option>
+                    {% for val, label in severity_choices %}
+                    <option value="{{ val }}" {% if severity_filter == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex flex-col gap-2">
+                <label class="text-xs text-slate-400">نوع الإنذار</label>
+                <select name="alert_type" class="sh-input">
+                    <option value="">الكل</option>
+                    {% for val, label in type_choices %}
+                    <option value="{{ val }}" {% if type_filter == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex flex-col gap-2">
+                <label class="text-xs text-slate-400">الحالة</label>
+                <select name="resolved" class="sh-input">
+                    <option value="">الكل</option>
+                    <option value="no" {% if resolved_filter == 'no' %}selected{% endif %}>مفتوحة</option>
+                    <option value="yes" {% if resolved_filter == 'yes' %}selected{% endif %}>مغلقة</option>
+                </select>
+            </div>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2.5 rounded-lg text-sm transition-all flex items-center justify-center gap-2">
+                <i class="fa-solid fa-filter"></i> تصفية
+            </button>
+        </form>
+    </section>
+
+    <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+        <div class="overflow-x-auto rounded-xl border border-slate-700 bg-slate-900">
+            <table class="w-full text-right text-sm">
+                <thead class="bg-slate-800 text-slate-300 text-xs border-b border-slate-700">
+                    <tr>
+                        <th class="px-5 py-4">النوع</th>
+                        <th class="px-5 py-4">الرحلة</th>
+                        <th class="px-5 py-4">الوصف</th>
+                        <th class="px-5 py-4 text-center">الخطورة</th>
+                        <th class="px-5 py-4 text-center">الحالة</th>
+                        <th class="px-5 py-4">التاريخ</th>
+                        <th class="px-5 py-4 text-center">خيارات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for alert in alerts %}
+                    <tr class="hover:bg-slate-800/50">
+                        <td class="px-5 py-4 font-medium text-slate-200">{{ alert.get_alert_type_display }}</td>
+                        <td class="px-5 py-4 font-mono text-blue-400">{{ alert.trip.trip_code }}</td>
+                        <td class="px-5 py-4 text-slate-300 max-w-xs truncate" title="{{ alert.description }}">{{ alert.description }}</td>
+                        <td class="px-5 py-4 text-center">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-medium
+                                {% if alert.severity == 'critical' %}bg-red-500/10 text-red-400
+                                {% elif alert.severity == 'medium' %}bg-yellow-500/10 text-yellow-400
+                                {% else %}bg-slate-500/10 text-slate-400{% endif %}">
+                                {{ alert.get_severity_display }}
+                            </span>
+                        </td>
+                        <td class="px-5 py-4 text-center">
+                            {% if alert.is_resolved %}
+                            <span class="px-2.5 py-1 rounded-full text-xs bg-emerald-500/10 text-emerald-400">مغلق</span>
+                            {% else %}
+                            <span class="px-2.5 py-1 rounded-full text-xs bg-amber-500/10 text-amber-400">مفتوح</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-4 text-xs text-slate-400">{{ alert.created_at|date:"Y-m-d H:i" }}</td>
+                        <td class="px-5 py-4 text-center">
+                            <a href="{% url 'alerts:alert_detail' alert.id %}" class="inline-flex items-center gap-1.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-all">
+                                <i class="fa-solid fa-eye text-blue-400"></i> عرض
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="px-5 py-12 text-center text-slate-500">
+                        <i class="fa-solid fa-circle-check text-3xl text-emerald-500/40 mb-2 block"></i>
+                        لا توجد إنذارات مطابقة.
+                    </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

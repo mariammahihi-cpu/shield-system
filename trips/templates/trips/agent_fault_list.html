@@ -1,0 +1,79 @@
+{% extends 'agent_base.html' %}
+
+{% block title %}إدارة البلاغات{% endblock %}
+
+{% block page_title %}
+    <i class="fa-solid fa-triangle-exclamation text-red-500"></i>
+    إدارة البلاغات المرفوعة
+{% endblock %}
+
+{% block content %}
+<section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+    <div class="flex items-center justify-between mb-6 border-b border-slate-700 pb-3">
+        <h2 class="text-lg font-bold">بلاغاتك السابقة عن الفروقات والأعطال</h2>
+        <span class="bg-slate-900 px-3 py-1 rounded-lg text-xs font-mono text-slate-400 border border-slate-700">
+            الإجمالي: {{ faults.count }}
+        </span>
+    </div>
+
+    <div class="overflow-x-auto rounded-xl border border-slate-700 bg-slate-900">
+        <table class="w-full text-right text-sm">
+            <thead class="bg-slate-800 text-slate-300 uppercase text-xs border-b border-slate-700">
+                <tr>
+                    <th class="px-6 py-4">نوع العطل</th>
+                    <th class="px-6 py-4">الرحلة / المحطة</th>
+                    <th class="px-6 py-4">الوصف</th>
+                    <th class="px-6 py-4 text-center">صورة</th>
+                    <th class="px-6 py-4 text-center">حرِج؟</th>
+                    <th class="px-6 py-4 text-center">الحالة</th>
+                    <th class="px-6 py-4">تاريخ البلاغ</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+                {% for fault in faults %}
+                <tr class="hover:bg-slate-800/50 transition-colors">
+                    <td class="px-6 py-4 font-medium text-slate-200">{{ fault.get_fault_type_display }}</td>
+                    <td class="px-6 py-4 text-xs">
+                        {% if fault.trip %}<div class="font-mono text-blue-400">{{ fault.trip.trip_code }}</div>{% endif %}
+                        {% if fault.station %}<div class="text-slate-400">{{ fault.station.station_name }}</div>{% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-slate-300 max-w-xs truncate" title="{{ fault.description }}">{{ fault.description }}</td>
+                    <td class="px-6 py-4 text-center">
+                        {% if fault.photo %}
+                        <a href="{{ fault.photo.url }}" target="_blank" class="text-blue-400 hover:text-blue-300"><i class="fa-solid fa-image"></i></a>
+                        {% else %}
+                        <span class="text-slate-600">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        {% if fault.is_critical %}
+                        <span class="text-red-400"><i class="fa-solid fa-circle-exclamation"></i></span>
+                        {% else %}
+                        <span class="text-slate-600">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="px-3 py-1 rounded-full text-xs font-medium border inline-block
+                            {% if fault.status == 'open' %}bg-yellow-500/10 text-yellow-400 border-yellow-500/20
+                            {% elif fault.status == 'fixing' %}bg-blue-500/10 text-blue-400 border-blue-500/20
+                            {% else %}bg-emerald-500/10 text-emerald-400 border-emerald-500/20{% endif %}">
+                            {{ fault.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-xs text-slate-400">{{ fault.created_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center text-slate-500">
+                        <div class="flex flex-col items-center gap-2">
+                            <i class="fa-solid fa-folder-open text-3xl opacity-40"></i>
+                            <p>لم ترفع أي بلاغات حتى الآن.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

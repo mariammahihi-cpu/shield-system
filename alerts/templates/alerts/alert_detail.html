@@ -1,0 +1,107 @@
+{% extends base_template|default:'admin_base.html' %}
+
+{% block title %}تفاصيل الإنذار{% endblock %}
+
+{% block page_title %}
+    <i class="fa-solid fa-triangle-exclamation text-red-400"></i>
+    تفاصيل الإنذار — {{ alert.trip.trip_code }}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl">
+        <div class="flex items-center justify-between mb-6 border-b border-slate-700 pb-4 flex-wrap gap-3">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-red-400 text-lg"></i>
+                <h2 class="text-lg font-bold">{{ alert.get_alert_type_display }}</h2>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="px-3 py-1 rounded-full text-xs font-bold
+                    {% if alert.severity == 'critical' %}bg-red-500/10 text-red-400 border border-red-500/20
+                    {% elif alert.severity == 'medium' %}bg-yellow-500/10 text-yellow-400 border border-yellow-500/20
+                    {% else %}bg-slate-500/10 text-slate-400 border border-slate-500/20{% endif %}">
+                    {{ alert.get_severity_display }}
+                </span>
+                {% if alert.is_resolved %}
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">مغلق</span>
+                {% else %}
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">مفتوح</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-6 text-sm mb-6">
+            <div><div class="text-slate-400 text-xs mb-1.5">رمز الرحلة</div><div class="font-bold text-blue-400 font-mono">{{ alert.trip.trip_code }}</div></div>
+            <div><div class="text-slate-400 text-xs mb-1.5">المحطة</div><div class="font-bold text-slate-200">{{ alert.trip.station.station_name }}</div></div>
+            <div><div class="text-slate-400 text-xs mb-1.5">تاريخ الإنذار</div><div class="font-bold text-slate-200">{{ alert.created_at|date:"Y-m-d H:i" }}</div></div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-700 rounded-xl p-5">
+            <div class="text-slate-400 text-xs mb-2">وصف الخرق</div>
+            <div class="text-slate-200 leading-relaxed">{{ alert.description }}</div>
+        </div>
+
+        {% if alert.is_resolved %}
+        <div class="mt-5 bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-5">
+            <div class="text-emerald-400 text-xs mb-2"><i class="fa-solid fa-circle-check ml-1"></i> قرار الإغلاق</div>
+            <div class="text-slate-300 text-sm">{{ alert.resolution_notes }}</div>
+            <div class="text-xs text-slate-500 mt-2">
+                بواسطة: {{ alert.resolved_by.full_name|default:alert.resolved_by.username }} — {{ alert.resolved_at|date:"Y-m-d H:i" }}
+            </div>
+        </div>
+        {% endif %}
+    </section>
+
+    {% if not alert.is_resolved and request.user.role == 'auditor' or not alert.is_resolved and request.user.role == 'admin' %}
+    <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl">
+        <div class="flex items-center gap-2 mb-5 border-b border-slate-700 pb-4">
+            <i class="fa-solid fa-gavel text-emerald-400 text-lg"></i>
+            <h2 class="text-lg font-bold">اعتماد وإغلاق الإنذار</h2>
+        </div>
+        <form method="post" action="{% url 'alerts:resolve_alert' alert.id %}" class="space-y-4">
+            {% csrf_token %}
+            <div class="flex flex-col gap-2">
+                <label class="text-sm font-medium text-slate-300">ملاحظات القرار الإداري</label>
+                <textarea name="resolution_notes" rows="3" required class="sh-input" placeholder="اكتب مبرّر ونتيجة معالجة هذا الإنذار..."></textarea>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-3 rounded-xl text-sm transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-check-double"></i> اعتماد إغلاق الإنذار
+                </button>
+            </div>
+        </form>
+    </section>
+    {% endif %}
+
+    <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl">
+        <div class="flex items-center gap-2 mb-5 border-b border-slate-700 pb-4">
+            <i class="fa-solid fa-file-pen text-blue-400 text-lg"></i>
+            <h2 class="text-lg font-bold">طلبات التصحيح المرتبطة</h2>
+        </div>
+        <div class="space-y-4">
+            {% for corr in correction_requests %}
+            <div class="bg-slate-900 border border-slate-700 rounded-xl p-5">
+                <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+                    <span class="text-sm font-bold text-slate-200">{{ corr.requested_by.full_name|default:corr.requested_by.username }}</span>
+                    <span class="px-2.5 py-0.5 rounded-full text-xs
+                        {% if corr.status == 'approved' %}bg-emerald-500/10 text-emerald-400
+                        {% elif corr.status == 'rejected' %}bg-red-500/10 text-red-400
+                        {% else %}bg-amber-500/10 text-amber-400{% endif %}">
+                        {{ corr.get_status_display }}
+                    </span>
+                </div>
+                <div class="text-sm text-slate-400">{{ corr.reason }}</div>
+                <div class="text-xs text-slate-500 mt-2">{{ corr.created_at|date:"Y-m-d H:i" }}</div>
+            </div>
+            {% empty %}
+            <div class="text-center text-slate-500 py-6 text-sm">لا توجد طلبات تصحيح مرتبطة بهذا الإنذار.</div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <a href="{% url 'alerts:alert_list' %}" class="block text-center text-sm text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-arrow-right-long ml-1"></i> العودة لقائمة الإنذارات
+    </a>
+</div>
+{% endblock %}

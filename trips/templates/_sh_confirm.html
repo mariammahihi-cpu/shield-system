@@ -1,0 +1,49 @@
+{# ===== مودال التأكيد الموحّد Shield (قابل لإعادة الاستخدام) ===== #}
+<div id="shConfirm" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+    <div id="shConfirmBox" class="bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6 text-right transition-all duration-200 scale-95 opacity-0">
+        <div class="flex items-center gap-3 mb-4">
+            <div id="shConfirmIcon" class="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-amber-500/15 text-amber-400">
+                <i class="fas fa-power-off text-lg"></i>
+            </div>
+            <h3 id="shConfirmTitle" class="text-lg font-bold text-white">تأكيد الإجراء</h3>
+        </div>
+        <p id="shConfirmMsg" class="text-slate-400 text-sm mb-6 leading-relaxed"></p>
+        <div class="flex gap-3">
+            <button id="shConfirmOk" type="button" class="flex-1 inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold px-5 py-2.5 rounded-lg transition-colors">
+                <i class="fas fa-check"></i> تأكيد
+            </button>
+            <button id="shConfirmCancel" type="button" class="px-5 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold transition-colors">إلغاء</button>
+        </div>
+    </div>
+</div>
+<script>
+(function () {
+    const modal = document.getElementById('shConfirm'), box = document.getElementById('shConfirmBox');
+    const titleEl = document.getElementById('shConfirmTitle'), msgEl = document.getElementById('shConfirmMsg');
+    const iconEl = document.getElementById('shConfirmIcon').querySelector('i');
+    const okBtn = document.getElementById('shConfirmOk'), cancel = document.getElementById('shConfirmCancel');
+    let pendingForm = null;
+    function openModal(form) {
+        pendingForm = form;
+        msgEl.textContent = form.dataset.confirm || 'هل أنت متأكد من تنفيذ هذا الإجراء؟';
+        titleEl.textContent = form.dataset.confirmTitle || 'تأكيد الإجراء';
+        iconEl.className = 'fas ' + (form.dataset.confirmIcon || 'fa-power-off') + ' text-lg';
+        modal.classList.remove('hidden'); modal.classList.add('flex');
+        requestAnimationFrame(() => box.classList.remove('scale-95','opacity-0'));
+        okBtn.focus();
+    }
+    function closeModal() {
+        box.classList.add('scale-95','opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 150);
+        pendingForm = null;
+    }
+    document.addEventListener('submit', function (e) {
+        const form = e.target;
+        if (form.hasAttribute('data-confirm') && !form.dataset.confirmed) { e.preventDefault(); openModal(form); }
+    }, true);
+    okBtn.addEventListener('click', () => { if (pendingForm) { pendingForm.dataset.confirmed = '1'; pendingForm.submit(); } });
+    cancel.addEventListener('click', closeModal);
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal(); });
+})();
+</script>

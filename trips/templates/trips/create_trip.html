@@ -1,0 +1,96 @@
+{% extends base_template|default:'dispatcher_base.html' %}
+
+{% block title %}تجهيز شحنة جديدة{% endblock %}
+
+{% block page_title %}
+    <i class="fa-solid fa-truck-ramp-box text-blue-500"></i>
+    تجهيز وإنشاء شحنة توزيع جديدة
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl">
+        <div class="flex items-center gap-2 mb-6 border-b border-slate-700 pb-4">
+            <i class="fa-solid fa-boxes-packing text-blue-500 text-lg"></i>
+            <h2 class="text-lg font-bold">بيانات الشحنة والتحميل الابتدائي</h2>
+        </div>
+
+        <form method="post" action="{% url 'trips:create_trip' %}" class="space-y-6">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="flex flex-col gap-2">
+                    <label for="agent_id" class="text-sm font-medium text-slate-300">مندوب المحطة المستلم</label>
+                    <select name="agent_id" id="agent_id" required class="sh-input">
+                        <option value="" disabled selected>-- اختر المندوب الميداني --</option>
+                        {% for agent in agents %}
+                        <option value="{{ agent.id }}">{{ agent.full_name|default:agent.username }}</option>
+                        {% empty %}
+                        <option value="" disabled>لا يوجد مندوبين نشطين</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label for="truck_id" class="text-sm font-medium text-slate-300">الشاحنة والسائق</label>
+                    <select name="truck_id" id="truck_id" required class="sh-input">
+                        <option value="" disabled selected>-- اختر لوحة الشاحنة --</option>
+                        {% for truck in trucks %}
+                        <option value="{{ truck.id }}">{{ truck.truck_id }} — {{ truck.driver.driver_name }} ({{ truck.capacity_liters }} لتر)</option>
+                        {% empty %}
+                        <option value="" disabled>لا توجد شاحنات في الخدمة</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label for="station_id" class="text-sm font-medium text-slate-300">المحطة المستهدفة</label>
+                    <select name="station_id" id="station_id" required class="sh-input">
+                        <option value="" disabled selected>-- اختر محطة التفريغ --</option>
+                        {% for station in stations %}
+                        <option value="{{ station.id }}">{{ station.customer_number }} - {{ station.station_name }} ({{ station.city }})</option>
+                        {% empty %}
+                        <option value="" disabled>لا توجد محطات نشطة</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label for="seal_numbers" class="text-sm font-medium text-slate-300">
+                    <i class="fa-solid fa-lock text-yellow-500 ml-1"></i> الأرقام التسلسلية للأختام الأمنية
+                </label>
+                <input type="text" name="seal_numbers" id="seal_numbers" required
+                       placeholder="مثال: SEAL-9982, SEAL-9983, SEAL-VALVE-01" class="sh-input">
+                <span class="text-xs text-slate-500">افصل بين أرقام الأختام بفاصلة. تُوثَّق أمنياً وتُطابَق ميدانياً عند التفريغ.</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="flex flex-col gap-2">
+                    <label for="shipped_volume_ambient" class="text-sm font-medium text-slate-300">الحجم الظاهري المحمّل (لتر)</label>
+                    <input type="number" name="shipped_volume_ambient" id="shipped_volume_ambient" step="0.01" min="1" required placeholder="0.00" class="sh-input">
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label for="shipped_temperature" class="text-sm font-medium text-slate-300">درجة الحرارة عند التحميل (°C)</label>
+                    <input type="number" name="shipped_temperature" id="shipped_temperature" step="0.01" min="-50" max="60" required placeholder="15.00" class="sh-input">
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label for="shipped_density" class="text-sm font-medium text-slate-300">الكثافة المقاسة</label>
+                    <input type="number" name="shipped_density" id="shipped_density" step="0.0001" min="0" required placeholder="0.7450" class="sh-input">
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label for="notes" class="text-sm font-medium text-slate-300">ملاحظات إضافية (اختياري)</label>
+                <textarea name="notes" id="notes" rows="2" placeholder="أي ملاحظات فنية على عملية التعبئة أو الشاحنة..." class="sh-input"></textarea>
+            </div>
+
+            <div class="flex justify-end pt-2 border-t border-slate-700">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl text-sm transition-all shadow-lg flex items-center gap-2 mt-4">
+                    <i class="fa-solid fa-qrcode"></i> اعتماد الشحنة وتوليد رمز الـ QR
+                </button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

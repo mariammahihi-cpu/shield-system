@@ -1,0 +1,39 @@
+{% extends 'admin_base.html' %}
+{% block page_title %}<i class="fas fa-sliders text-blue-400"></i> الإعدادات التشغيلية والأمنية{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <form method="post" class="bg-slate-800/60 border border-slate-700 rounded-xl p-6">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="mb-5 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {% for field in form %}
+                {% if field.field.widget.input_type == 'checkbox' %}
+                    <div class="sm:col-span-2 flex items-center gap-3 py-2">
+                        {{ field }}
+                        <label for="{{ field.id_for_label }}" class="text-slate-200 text-sm font-medium cursor-pointer">{{ field.label }}</label>
+                    </div>
+                {% else %}
+                    <div>
+                        <label for="{{ field.id_for_label }}" class="block text-slate-300 text-sm font-medium mb-1.5">{{ field.label }}</label>
+                        {{ field }}
+                        {% for e in field.errors %}<p class="text-red-400 text-xs mt-1">{{ e }}</p>{% endfor %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="flex items-center justify-between mt-7 pt-5 border-t border-slate-700">
+            <button type="submit" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-lg transition">
+                <i class="fas fa-floppy-disk"></i> حفظ الإعدادات
+            </button>
+            {% if settings.updated_at %}
+            <span class="text-slate-500 text-xs">آخر تحديث: {{ settings.updated_at|date:"Y/m/d H:i" }}{% if settings.updated_by %} — {{ settings.updated_by.full_name }}{% endif %}</span>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

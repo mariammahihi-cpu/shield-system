@@ -1,0 +1,164 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}لوحة مدير النظام{% endblock %} - Shield</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        * { font-family: 'Tajawal', sans-serif; }
+
+        /* تنسيق موحّد لحقول Django (الكلاس sh-input مضاف في الـ Forms) */
+        .sh-input {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 0.625rem 1rem;
+            font-size: 0.875rem;
+            color: #e2e8f0;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .sh-input::placeholder { color: #64748b; }
+        .sh-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.18); }
+        textarea.sh-input { resize: none; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+{# قيم مساعدة لتحديد الزر النشط في الشريط الجانبي #}
+{% with url_name=request.resolver_match.url_name ns=request.resolver_match.namespace %}
+<div class="flex min-h-screen">
+
+    <!-- ============ الشريط الجانبي ============ -->
+       <aside class="hidden md:flex flex-col w-64 bg-slate-800 border-l border-slate-700 shrink-0 sticky top-0 h-screen overflow-y-auto">
+        <div class="h-16 flex items-center gap-3 px-6 border-b border-slate-700">
+            <div class="bg-blue-600 p-2 rounded-lg"><i class="fas fa-shield-halved text-white"></i></div>
+            <span class="text-lg font-bold">لوحة مدير النظام</span>
+        </div>
+
+        <nav class="flex-1 p-4 space-y-1 text-sm">
+            <a href="{% url 'users:user_list' %}"
+               class="flex items-center justify-between px-4 py-2.5 rounded-lg transition
+               {% if ns == 'users' %}bg-blue-600/20 text-blue-300 border border-blue-500/30{% else %}text-slate-300 hover:bg-slate-700{% endif %}">
+                <span class="flex items-center gap-3"><i class="fas fa-users-gear w-5"></i> المستخدمون</span>
+                {% if pending_devices_count %}
+                <span class="bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center">
+                    {{ pending_devices_count }}
+                </span>
+                {% endif %}
+            </a>
+
+            <a href="{% url 'trips:warehouse_list' %}"
+               class="flex items-center gap-3 px-4 py-2.5 rounded-lg transition
+               {% if 'warehouse' in url_name %}bg-blue-600/20 text-blue-300 border border-blue-500/30{% else %}text-slate-300 hover:bg-slate-700{% endif %}">
+                <i class="fas fa-warehouse w-5"></i> المستودعات
+            </a>
+
+            <a href="{% url 'trips:stations_list' %}"
+               class="flex items-center gap-3 px-4 py-2.5 rounded-lg transition
+               {% if 'station' in url_name %}bg-blue-600/20 text-blue-300 border border-blue-500/30{% else %}text-slate-300 hover:bg-slate-700{% endif %}">
+                <i class="fas fa-gas-pump w-5"></i> المحطات
+            </a>
+                        <a href="{% url 'trips:driver_list' %}"
+               class="flex items-center gap-3 px-4 py-2.5 rounded-lg transition
+               {% if 'driver' in url_name %}bg-blue-600/20 text-blue-300 border border-blue-500/30{% else %}text-slate-300 hover:bg-slate-700{% endif %}">
+                <i class="fas fa-id-card w-5"></i> السائقون
+            </a>
+                        <a href="{% url 'trips:truck_list' %}"
+               class="flex items-center gap-3 px-4 py-2.5 rounded-lg transition
+               {% if 'truck' in url_name %}bg-blue-600/20 text-blue-300 border border-blue-500/30{% else %}text-slate-300 hover:bg-slate-700{% endif %}">
+                <i class="fas fa-truck w-5"></i> الشاحنات
+            </a>
+
+            <a href="{% url 'audit:list' %}"
+               class="flex items-center justify-between px-4 py-2.5 rounded-lg transition
+               {% if ns == 'audit' %}bg-blue-600/20 text-blue-300 border border-blue-500/30{% else %}text-slate-300 hover:bg-slate-700{% endif %}">
+               <span class="flex items-center gap-3"><i class="fas fa-clipboard-list w-5"></i> سجل التدقيق</span>
+               {% if new_audit_count %}
+               <span class="bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center">
+                 {{ new_audit_count }}
+               </span>
+               {% endif %}
+            </a>
+            <a href="{% url 'users:system_settings' %}"
+               class="flex items-center gap-3 px-4 py-2.5 rounded-lg transition
+               {% if url_name == 'system_settings' %}bg-blue-600/20 text-blue-300 border border-blue-500/30{% else %}text-slate-300 hover:bg-slate-700{% endif %}">
+                <i class="fas fa-sliders w-5"></i> الإعدادات
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-slate-700">
+    <form method="post" action="{% url 'users:logout' %}"
+          data-confirm-title="تسجيل الخروج"
+          data-confirm="هل أنت متأكد من تسجيل الخروج من النظام؟"
+          data-confirm-icon="fa-right-from-bracket">
+        {% csrf_token %}
+        <button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-red-300 hover:bg-red-500/10 transition text-sm">
+            <i class="fas fa-right-from-bracket w-5"></i> تسجيل الخروج
+        </button>
+    </form>
+         </div>
+    </aside>
+
+    <!-- ============ منطقة المحتوى ============ -->
+    <div class="flex-1 flex flex-col min-w-0">
+
+       <header class="h-16 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-6 sticky top-0 z-30">
+                <h1 class="text-xl font-bold flex items-center gap-2">
+                {% block page_title %}لوحة المدير{% endblock %}
+                  </h1>
+          <div class="flex items-center gap-4">
+               {% block header_actions %}{% endblock %}
+
+               <!-- 🔔 جرس الإشعارات -->
+               <a href="{% url 'alerts:notifications' %}" class="relative text-slate-300 hover:text-white transition" title="الإشعارات">
+                   <i class="fas fa-bell text-lg"></i>
+                   {% if unread_notifications %}
+                   <span class="absolute -top-2 -left-2 bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center">
+                       {{ unread_notifications }}
+                   </span>
+                   {% endif %}
+               </a>
+
+               <!-- بطاقة المستخدم -->
+           <div class="flex items-center gap-3 pr-4 border-r border-slate-700">
+            <div class="text-left leading-tight hidden sm:block">
+                <div class="text-sm font-semibold text-white">{{ request.user.full_name|default:request.user.username }}</div>
+                <div class="text-xs text-slate-400">{{ request.user.get_role_display }}</div>
+            </div>
+            <div class="w-9 h-9 rounded-full bg-blue-600/20 border border-blue-500/30 text-blue-300 flex items-center justify-center font-bold">
+                {{ request.user.full_name|default:request.user.username|first|upper }}
+                </div>
+             </div>
+          </div>
+       </header>
+
+        <main class="flex-1 p-6">
+
+            {# الرسائل موحّدة لكل الصفحات #}
+            {% if messages %}{% for m in messages %}
+            <div class="mb-4 px-4 py-3 rounded-lg border text-sm
+                {% if m.tags == 'success' %}bg-green-500/10 border-green-500/30 text-green-300
+                {% elif m.tags == 'warning' %}bg-yellow-500/10 border-yellow-500/30 text-yellow-300
+                {% else %}bg-red-500/10 border-red-500/30 text-red-300{% endif %}">{{ m }}</div>
+            {% endfor %}{% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+{% endwith %}
+
+{% include '_sh_confirm.html' %}
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

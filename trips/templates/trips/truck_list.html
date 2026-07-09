@@ -1,0 +1,86 @@
+{% extends base_template|default:'users/admin_base.html' %}
+{% block page_title %}<i class="fas fa-truck text-blue-400"></i> إدارة الناقلات{% endblock %}
+{% block header_actions %}
+<a href="{% url 'trips:truck_create' %}" class="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2">
+    <i class="fas fa-plus"></i> شاحنة جديدة
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+
+    <form method="get" class="mb-5">
+        <div class="relative">
+            <i class="fas fa-magnifying-glass absolute top-1/2 -translate-y-1/2 right-4 text-slate-500"></i>
+            <input type="text" name="search" value="{{ search|default:'' }}" placeholder="ابحث برقم اللوحة أو اسم السائق..." class="sh-input w-full pr-11">
+        </div>
+    </form>
+
+    <div class="bg-slate-800/60 border border-slate-700 rounded-xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-right">
+                <thead class="bg-slate-900/70 text-slate-300 text-xs uppercase">
+                    <tr>
+                        <th class="px-4 py-3 font-semibold">رقم اللوحة</th>
+                        <th class="px-4 py-3 font-semibold">السائق المعيّن</th>
+                        <th class="px-4 py-3 font-semibold">السعة (لتر)</th>
+                        <th class="px-4 py-3 font-semibold">الحالة</th>
+                        <th class="px-4 py-3 font-semibold">آخر فحص</th>
+                        <th class="px-4 py-3 font-semibold">GPS</th>
+                        <th class="px-4 py-3 font-semibold text-center">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-700/70">
+                    {% for t in trucks %}
+                    <tr class="hover:bg-slate-700/30 transition {% if not t.is_active %}opacity-50{% endif %}">
+                        <td class="px-4 py-3 text-white font-medium" dir="ltr">{{ t.truck_id }}</td>
+                        <td class="px-4 py-3 text-slate-300">{{ t.driver.driver_name }}</td>
+                        <td class="px-4 py-3 text-slate-300">{{ t.capacity_liters|floatformat:0 }}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                {% if t.status == 'active' %}
+                                    <span class="inline-flex items-center gap-1.5 bg-emerald-500/15 text-emerald-400 text-xs font-medium px-2.5 py-1 rounded-full"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> {{ t.get_status_display }}</span>
+                                {% elif t.status == 'maintenance' %}
+                                    <span class="inline-flex items-center gap-1.5 bg-amber-500/15 text-amber-400 text-xs font-medium px-2.5 py-1 rounded-full"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> {{ t.get_status_display }}</span>
+                                {% else %}
+                                    <span class="inline-flex items-center gap-1.5 bg-red-500/15 text-red-400 text-xs font-medium px-2.5 py-1 rounded-full"><span class="w-1.5 h-1.5 rounded-full bg-red-400"></span> {{ t.get_status_display }}</span>
+                                {% endif %}
+                                {% if not t.is_active %}
+                                    <span class="inline-flex items-center gap-1.5 bg-slate-500/20 text-slate-400 text-xs font-medium px-2.5 py-1 rounded-full"><i class="fas fa-ban"></i> موقوفة</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-slate-300" dir="ltr">{{ t.last_inspection_date|date:"Y-m-d" }}</td>
+                        <td class="px-4 py-3">
+                            {% if t.is_gps_active %}
+                                <i class="fas fa-location-dot text-emerald-400" title="مفعّل"></i>
+                            {% else %}
+                                <i class="fas fa-location-crosshairs text-slate-600" title="معطّل"></i>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center justify-center gap-2">
+                                <a href="{% url 'trips:truck_update' t.id %}" class="text-slate-400 hover:text-blue-400 transition" title="تعديل"><i class="fas fa-pen-to-square"></i></a>
+                                <form method="post" action="{% url 'trips:truck_archive' t.id %}" class="inline"
+                                      data-confirm-title="{% if t.is_active %}إيقاف الشاحنة{% else %}تفعيل الشاحنة{% endif %}"
+                                      data-confirm="هل أنت متأكد من {% if t.is_active %}إيقاف{% else %}تفعيل{% endif %} الشاحنة {{ t.truck_id }}؟"
+                                      data-confirm-icon="fa-power-off">
+                                    {% csrf_token %}
+                                    <button type="submit" class="transition {% if t.is_active %}text-emerald-400 hover:text-red-400{% else %}text-slate-500 hover:text-emerald-400{% endif %}" title="{% if t.is_active %}إيقاف{% else %}تفعيل{% endif %}">
+                                        <i class="fas {% if t.is_active %}fa-toggle-on{% else %}fa-toggle-off{% endif %}"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="px-4 py-12 text-center text-slate-500"><i class="fas fa-truck-ramp-box text-3xl mb-3 block"></i>
+                        {% if search %}لا توجد نتائج مطابقة لبحثك «{{ search }}».{% else %}لا توجد شاحنات مسجّلة بعد.{% endif %}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if trucks %}<p class="text-slate-500 text-xs mt-3">إجمالي الشاحنات المعروضة: {{ trucks|length }}</p>{% endif %}
+</div>
+{% endblock %}

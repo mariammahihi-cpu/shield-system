@@ -1,0 +1,337 @@
+{% extends 'agent_base.html' %}
+
+{% block title %}توثيق تفريغ الرحلة {{ trip.trip_code }}{% endblock %}
+
+{% block page_title %}
+    <i class="fa-solid fa-truck-droplet text-blue-500"></i>
+    التوثيق الميداني والمطابقة الرقمية — {{ trip.trip_code }}
+{% endblock %}
+
+{% block header_actions %}
+    <span id="network-status-badge" class="px-3 py-1.5 rounded-full text-xs font-bold border flex items-center gap-2 bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block sh-pulse"></span>
+        <span id="network-status-text">متصل بالشبكة</span>
+    </span>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+    <!-- بطاقة بيانات الرحلة (كامل العرض) -->
+    <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl">
+        <div class="flex items-center gap-2 mb-6 border-b border-slate-700 pb-4">
+            <i class="fa-solid fa-file-shield text-blue-500 text-lg"></i>
+            <h2 class="text-lg font-bold">بيانات الشحنة المرسلة</h2>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-x-10 gap-y-6 text-sm">
+            <div>
+                <div class="text-slate-400 text-xs mb-1.5">المحطة</div>
+                <div class="font-bold text-slate-200">{{ trip.station.station_name }}</div>
+            </div>
+            <div>
+                <div class="text-slate-400 text-xs mb-1.5">رقم الزبون</div>
+                <div class="font-bold text-slate-200">{{ trip.station.customer_number }}</div>
+            </div>
+            <div>
+                <div class="text-slate-400 text-xs mb-1.5">المدينة</div>
+                <div class="font-bold text-slate-200">{{ trip.station.city }}</div>
+            </div>
+            <div>
+                <div class="text-slate-400 text-xs mb-1.5">الشاحنة / السائق</div>
+                <div class="font-bold text-slate-200">{{ trip.truck.truck_id }} — {{ trip.truck.driver.driver_name }}</div>
+            </div>
+           
+            <div>
+                <div class="text-slate-400 text-xs mb-1.5">حالة الرحلة الحالية</div>
+                <div class="font-bold text-blue-400">{{ trip.get_status_display }}</div>
+            </div>
+            <div>
+                <div class="text-slate-400 text-xs mb-1.5">صلاحية رمز QR</div>
+                <div class="font-bold {% if trip.is_qr_valid %}text-emerald-400{% else %}text-red-400{% endif %}">
+                    {% if trip.is_qr_valid %}سارٍ حتى {{ trip.qr_expires_at|date:"Y-m-d H:i" }}{% else %}منتهي الصلاحية{% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- صف: الموقع الجغرافي + المطابقة الرقمية (جنب بعض) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- بطاقة إحداثيات GPS -->
+        <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+            <div class="flex items-center gap-2 mb-5 border-b border-slate-700 pb-4">
+                <i class="fa-solid fa-location-dot text-red-500 text-lg"></i>
+                <h2 class="text-base font-bold">إحداثيات الموقع الحالي</h2>
+            </div>
+            <div id="gps-status" class="text-sm text-yellow-400 flex items-center gap-2 mb-4">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                <span>جارٍ التقاط الموقع الجغرافي...</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4 text-xs">
+                <div class="bg-slate-900 rounded-lg p-4 border border-slate-700">
+                    <div class="text-slate-500 mb-1.5">خط العرض</div>
+                    <div id="lat-display" class="font-mono text-slate-200 text-sm">--</div>
+                </div>
+                <div class="bg-slate-900 rounded-lg p-4 border border-slate-700">
+                    <div class="text-slate-500 mb-1.5">خط الطول</div>
+                    <div id="lon-display" class="font-mono text-slate-200 text-sm">--</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- بطاقة المطابقة الرقمية (محاكاة مسح QR) -->
+        <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+            <div class="flex items-center gap-2 mb-5 border-b border-slate-700 pb-4">
+                <i class="fa-solid fa-qrcode text-blue-500 text-lg"></i>
+                <h2 class="text-base font-bold">المطابقة الرقمية (QR)</h2>
+            </div>
+
+            <div id="qr-scan-status" class="text-sm text-slate-400 flex items-center gap-2 mb-4">
+                <i class="fa-solid fa-hourglass-half"></i>
+                <span>بانتظار مسح رمز الـ QR الخاص بالرحلة...</span>
+            </div>
+
+            <button type="button" id="simulate-scan-btn" onclick="simulateQRScan()"
+                    class="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 mb-3">
+                <i class="fa-solid fa-camera"></i> تشغيل كاميرا مسح الـ QR (محاكاة PoC)
+            </button>
+
+            <details class="text-xs">
+                <summary class="cursor-pointer text-slate-500 hover:text-slate-300">إدخال يدوي لتوكن ممسوح (للاختبار الأمني)</summary>
+                <div class="mt-3 flex gap-2">
+                    <input type="text" id="manual-qr-input" placeholder="الصق توكن الممسوح هنا" class="sh-input text-xs">
+                    <button type="button" onclick="applyManualQRToken()" class="bg-slate-700 hover:bg-slate-600 px-3 rounded-lg text-slate-200 whitespace-nowrap">تطبيق</button>
+                </div>
+            </details>
+        </section>
+    </div>
+
+    <!-- نموذج القراءات الفيزيائية (كامل العرض) -->
+    <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl">
+        <div class="flex items-center gap-2 mb-6 border-b border-slate-700 pb-4">
+            <i class="fa-solid fa-flask-vial text-emerald-500 text-lg"></i>
+            <h2 class="text-lg font-bold">تسجيل القراءات الفيزيائية للتفريغ</h2>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="mb-5 px-4 py-3 rounded-lg border text-sm bg-red-500/10 border-red-500/30 text-red-300">
+            {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" id="discharge-form" action="{% url 'trips:submit_discharge' trip.id %}" novalidate>
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="flex flex-col gap-2">
+                    <label for="{{ form.discharge_density.id_for_label }}" class="text-sm font-medium text-slate-300">{{ form.discharge_density.label }}</label>
+                    {{ form.discharge_density }}
+                    {% for error in form.discharge_density.errors %}<span class="text-xs text-red-400">{{ error }}</span>{% endfor %}
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label for="{{ form.discharge_temperature.id_for_label }}" class="text-sm font-medium text-slate-300">{{ form.discharge_temperature.label }}</label>
+                    {{ form.discharge_temperature }}
+                    {% for error in form.discharge_temperature.errors %}<span class="text-xs text-red-400">{{ error }}</span>{% endfor %}
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label for="{{ form.discharge_volume_ambient.id_for_label }}" class="text-sm font-medium text-slate-300">{{ form.discharge_volume_ambient.label }}</label>
+                    {{ form.discharge_volume_ambient }}
+                    {% for error in form.discharge_volume_ambient.errors %}<span class="text-xs text-red-400">{{ error }}</span>{% endfor %}
+                </div>
+            </div>
+
+            <!-- الحقول المخفية: إحداثيات GPS + توكن الـ QR الممسوح -->
+            {{ form.scan_latitude }}
+            {{ form.scan_longitude }}
+            <input type="hidden" name="scanned_qr_token" id="id_scanned_qr_token">
+            {% for error in form.scan_latitude.errors %}<div class="mt-2 text-xs text-red-400">{{ error }}</div>{% endfor %}
+
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-8 pt-5 border-t border-slate-700">
+                <div id="submit-guard-note" class="text-xs text-yellow-400 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>يلزم مسح رمز الـ QR والتقاط الموقع الجغرافي بنجاح قبل الإرسال.</span>
+                </div>
+                <button type="submit" id="submit-discharge-btn" disabled
+                        class="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-bold px-8 py-3 rounded-xl text-sm transition-all shadow-lg flex items-center justify-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-floppy-disk"></i> حفظ وتسجيل عملية التفريغ
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <!-- بطاقة آلية العمل دون اتصال (كامل العرض) -->
+    <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-cloud-arrow-up text-yellow-500 text-lg"></i>
+                <div>
+                    <h2 class="text-base font-bold">المزامنة عند انقطاع الشبكة (PoC)</h2>
+                    <p class="text-xs text-slate-400 mt-1">تُحفظ القراءات محلياً عند انقطاع الشبكة وتُرسل تلقائياً عند عودتها.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-xs">
+                    <span class="text-slate-400">بانتظار المزامنة</span>
+                    <span id="offline-queue-count" class="font-bold text-yellow-400">0</span>
+                </div>
+                <button type="button" onclick="syncOfflineQueue()"
+                        class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2.5 rounded-lg transition-all flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-rotate"></i> مزامنة الآن
+                </button>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const TRIP_ID           = "{{ trip.id }}";
+    const TRIP_CODE         = "{{ trip.trip_code }}";
+    const TRIP_QR_TOKEN     = "{{ trip.qr_token }}";
+    const SUBMIT_URL        = "{% url 'trips:submit_discharge' trip.id %}";
+    const OFFLINE_QUEUE_KEY = "shield_offline_discharge_queue";
+
+    let gpsCaptured = false;
+    let qrScanned   = false;
+
+    // 1) التقاط إحداثيات GPS فور فتح الصفحة
+    function captureAgentLocation() {
+        const statusEl = document.getElementById('gps-status');
+        statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>جارٍ التقاط الموقع الجغرافي...</span>';
+        statusEl.className = 'text-sm text-yellow-400 flex items-center gap-2 mb-4';
+
+        if (!navigator.geolocation) {
+            statusEl.innerHTML = '<i class="fa-solid fa-circle-xmark"></i><span>المتصفح لا يدعم خدمة تحديد الموقع.</span>';
+            statusEl.className = 'text-sm text-red-400 flex items-center gap-2 mb-4';
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(function (position) {
+            const lat = position.coords.latitude.toFixed(6);
+            const lon = position.coords.longitude.toFixed(6);
+            document.getElementById('id_scan_latitude').value  = lat;
+            document.getElementById('id_scan_longitude').value = lon;
+            document.getElementById('lat-display').textContent = lat;
+            document.getElementById('lon-display').textContent = lon;
+            statusEl.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>تم تحديد الموقع الجغرافي بنجاح.</span>';
+            statusEl.className = 'text-sm text-emerald-400 flex items-center gap-2 mb-4';
+            gpsCaptured = true;
+            evaluateSubmitGuard();
+        }, function (error) {
+            statusEl.innerHTML = '<i class="fa-solid fa-circle-xmark"></i><span>تعذر تحديد الموقع: فعّل خدمة الـ GPS وامنح الإذن.</span>';
+            statusEl.className = 'text-sm text-red-400 flex items-center gap-2 mb-4';
+            gpsCaptured = false;
+            evaluateSubmitGuard();
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    }
+
+    // 2) محاكاة مسح الـ QR والتحقق من مطابقة qr_token
+    function simulateQRScan() { setScannedToken(TRIP_QR_TOKEN, true); }
+
+    function applyManualQRToken() {
+        const value = document.getElementById('manual-qr-input').value.trim();
+        if (!value) return;
+        setScannedToken(value, value === TRIP_QR_TOKEN);
+    }
+
+    function setScannedToken(token, matches) {
+        document.getElementById('id_scanned_qr_token').value = token;
+        const statusEl = document.getElementById('qr-scan-status');
+        if (matches) {
+            statusEl.innerHTML = `<i class="fa-solid fa-circle-check"></i><span>تم مسح الرمز وتطابق مع الرحلة ${TRIP_CODE} بنجاح.</span>`;
+            statusEl.className = 'text-sm text-emerald-400 flex items-center gap-2 mb-4';
+            qrScanned = true;
+        } else {
+            statusEl.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i><span>تحذير: الرمز الممسوح لا يطابق توكن هذه الرحلة! سيُرفض عند الإرسال.</span>';
+            statusEl.className = 'text-sm text-red-400 flex items-center gap-2 mb-4';
+            qrScanned = true; // نسمح بالإرسال ليظهر رفض الخادم كإثبات مفهوم
+        }
+        evaluateSubmitGuard();
+    }
+
+    // تفعيل/تعطيل زر الإرسال
+    function evaluateSubmitGuard() {
+        const btn  = document.getElementById('submit-discharge-btn');
+        const note = document.getElementById('submit-guard-note');
+        if (gpsCaptured && qrScanned) {
+            btn.removeAttribute('disabled');
+            note.classList.add('hidden');
+        } else {
+            btn.setAttribute('disabled', 'true');
+            note.classList.remove('hidden');
+        }
+    }
+
+    // 3) آلية العمل دون اتصال عبر localStorage
+    function getCsrfToken() {
+        const match = document.cookie.match(/csrftoken=([^;]+)/);
+        return match ? match[1] : document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+    function getOfflineQueue() {
+        try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY)) || []; }
+        catch (e) { return []; }
+    }
+    function saveOfflineQueue(queue) {
+        localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+        document.getElementById('offline-queue-count').textContent = queue.length;
+    }
+    function refreshOfflineQueueBadge() {
+        document.getElementById('offline-queue-count').textContent = getOfflineQueue().length;
+    }
+    function queueDischargeOffline(formData) {
+        const queue = getOfflineQueue();
+        queue.push({ trip_id: TRIP_ID, submit_url: SUBMIT_URL, saved_at: new Date().toISOString(), data: formData });
+        saveOfflineQueue(queue);
+    }
+    function syncOfflineQueue() {
+        if (!navigator.onLine) return;
+        const queue = getOfflineQueue();
+        if (queue.length === 0) return;
+        const remaining = [];
+        let index = 0;
+        function processNext() {
+            if (index >= queue.length) { saveOfflineQueue(remaining); return; }
+            const item = queue[index];
+            fetch(item.submit_url, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams(item.data),
+            }).then(function (response) {
+                if (!response.ok && response.status >= 500) remaining.push(item);
+            }).catch(function () {
+                remaining.push(item);
+            }).finally(function () { index += 1; processNext(); });
+        }
+        processNext();
+    }
+
+    document.getElementById('discharge-form').addEventListener('submit', function (event) {
+        if (!navigator.onLine) {
+            event.preventDefault();
+            const formData = {};
+            new FormData(this).forEach(function (value, key) { formData[key] = value; });
+            queueDischargeOffline(formData);
+            alert('لا يوجد اتصال بالشبكة حالياً. حُفظت القراءات محلياً وستُزامَن تلقائياً عند عودة الاتصال.');
+        }
+    });
+
+    window.addEventListener('online', function () {
+        document.getElementById('network-status-badge').className = 'px-3 py-1.5 rounded-full text-xs font-bold border flex items-center gap-2 bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+        document.getElementById('network-status-text').textContent = 'متصل بالشبكة';
+        syncOfflineQueue();
+    });
+    window.addEventListener('offline', function () {
+        document.getElementById('network-status-badge').className = 'px-3 py-1.5 rounded-full text-xs font-bold border flex items-center gap-2 bg-red-500/10 text-red-400 border-red-500/30';
+        document.getElementById('network-status-text').textContent = 'غير متصل — سيتم الحفظ محلياً';
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        captureAgentLocation();
+        refreshOfflineQueueBadge();
+        if (navigator.onLine) syncOfflineQueue();
+    });
+</script>
+{% endblock %}

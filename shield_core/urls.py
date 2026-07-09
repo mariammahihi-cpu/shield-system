@@ -10,5 +10,5 @@ urlpatterns = [
     path('trips/', include('trips.urls', namespace='trips')),
     path('alerts/', include('alerts.urls', namespace='alerts')),
     path('faults/', include('faults.urls', namespace='faults')),
-    path('audit/', include('audit.urls', namespace='audit')),
+    path('audit/', include('audit.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

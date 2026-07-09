@@ -1,0 +1,86 @@
+{% extends 'agent_base.html' %}
+
+{% block title %}الإبلاغ عن عطل — {{ trip.trip_code }}{% endblock %}
+
+{% block page_title %}
+    <i class="fa-solid fa-triangle-exclamation text-red-500"></i>
+    الإبلاغ عن فروقات القراءات / أعطال الأجهزة
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+    <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+        <div class="flex items-center gap-2 mb-4 border-b border-slate-700 pb-3">
+            <i class="fa-solid fa-file-shield text-blue-500 text-lg"></i>
+            <h2 class="text-lg font-bold">البلاغ مرتبط بالرحلة</h2>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+            <div>
+                <div class="text-slate-400 text-xs mb-1">رمز الرحلة</div>
+                <div class="font-bold text-blue-400 font-mono">{{ trip.trip_code }}</div>
+            </div>
+            <div>
+                <div class="text-slate-400 text-xs mb-1">المحطة</div>
+                <div class="font-bold text-slate-200">{{ trip.station.station_name }}</div>
+            </div>
+            <div>
+                <div class="text-slate-400 text-xs mb-1">الشاحنة</div>
+                <div class="font-bold text-slate-200">{{ trip.truck.truck_id }}</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl card-critical">
+        <div class="flex items-center gap-2 mb-4 border-b border-slate-700 pb-3">
+            <i class="fa-solid fa-clipboard-list text-red-500 text-lg"></i>
+            <h2 class="text-lg font-bold">تفاصيل البلاغ</h2>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            {% if form.errors %}
+            <div class="mb-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+               ⚠️ يرجى إكمال كافة الحقول المطلوبة قبل الإرسال.
+            </div>
+            {% endif %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="flex flex-col gap-2">
+                    <label for="{{ form.fault_type.id_for_label }}" class="text-sm font-medium text-slate-300">{{ form.fault_type.label }}</label>
+                    {{ form.fault_type }}
+                    {% for error in form.fault_type.errors %}<span class="text-xs text-red-400">{{ error }}</span>{% endfor %}
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label for="{{ form.photo.id_for_label }}" class="text-sm font-medium text-slate-300">{{ form.photo.label }}</label>
+                    {{ form.photo }}
+                    {% for error in form.photo.errors %}<span class="text-xs text-red-400">{{ error }}</span>{% endfor %}
+                </div>
+
+                <div class="md:col-span-2 flex flex-col gap-2">
+                    <label for="{{ form.description.id_for_label }}" class="text-sm font-medium text-slate-300">{{ form.description.label }}</label>
+                    {{ form.description }}
+                    {% for error in form.description.errors %}<span class="text-xs text-red-400">{{ error }}</span>{% endfor %}
+                </div>
+
+                <div class="md:col-span-2 flex flex-col gap-2">
+                    <label for="{{ form.action_taken.id_for_label }}" class="text-sm font-medium text-slate-300">{{ form.action_taken.label }}</label>
+                    {{ form.action_taken }}
+                    {% for error in form.action_taken.errors %}<span class="text-xs text-red-400">{{ error }}</span>{% endfor %}
+                </div>
+
+                <div class="md:col-span-2 flex items-center gap-3 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3">
+                    {{ form.is_critical }}
+                    <label for="{{ form.is_critical.id_for_label }}" class="text-sm text-slate-300 cursor-pointer">{{ form.is_critical.label }}</label>
+                </div>
+            </div>
+
+            <div class="flex justify-end mt-6 pt-4 border-t border-slate-700">
+                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl text-sm transition-all shadow-lg flex items-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i> بث البلاغ إلى غرفة العمليات
+                </button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

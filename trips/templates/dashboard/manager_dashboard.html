@@ -1,0 +1,265 @@
+{% extends 'manager_base.html' %}
+
+{% block title %}لوحة المدير العام{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* السطر الوحيد خارج @media print */
+    .print-only { display: none; }
+
+    @media print {
+        @page { margin: 1.2cm; }
+        aside, header, .no-print { display: none !important; }
+        main { padding: 0 !important; }
+        body {
+            background: #ffffff !important; color: #111827 !important;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        }
+        .print-only { display: block !important; }
+        .print-card, .print-card * {
+            background-color: transparent !important;
+            color: #111827 !important;
+            box-shadow: none !important;
+        }
+        .print-card {
+            border: 1px solid #cbd5e1 !important; border-radius: 8px !important;
+        }
+        .print-card thead tr { background-color: #e5e7eb !important; }
+        h2 { color: #1e3a8a !important; }
+        section, .print-card { page-break-inside: avoid; }
+        tr { page-break-inside: avoid; }
+    }
+</style>
+{% endblock %}
+
+{% block page_title %}
+    <i class="fa-solid fa-chart-line text-emerald-400"></i>
+    لوحة القيادة المركزية — الرقابة الإدارية
+{% endblock %}
+
+{% block header_actions %}
+    <button onclick="window.print()" class="no-print bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-lg text-xs transition-all flex items-center gap-2">
+        <i class="fa-solid fa-print"></i> طباعة التقرير (PDF)
+    </button>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8">
+
+    <!-- ترويسة التقرير (طباعة فقط) -->
+    <div class="print-only" style="margin-bottom: 22px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:3px solid #1e3a8a; padding-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="background:#1e3a8a; color:#fff; width:38px; height:38px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:18px;"><i class="fa-solid fa-shield-halved"></i></span>
+                <div>
+                    <div style="font-size:20px; font-weight:800; color:#1e3a8a;">منظومة درع Shield</div>
+                    <div style="font-size:12px; color:#555; margin-top:2px;">تقرير القيادة المركزية — الرقابة الإدارية</div>
+                </div>
+            </div>
+            <div style="text-align:left; font-size:11px; color:#555; line-height:1.8;">
+                <div>تاريخ الإصدار: <span id="print-date"></span></div>
+                <div>المُصدِر: {{ request.user.full_name|default:request.user.username }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- بطاقات المؤشرات الرئيسية -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="print-card bg-slate-800 border border-slate-700 rounded-2xl p-6 flex items-center gap-5">
+            <div class="bg-blue-500/15 text-blue-400 w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0"><i class="fa-solid fa-truck-fast"></i></div>
+            <div>
+                <div class="text-3xl font-bold leading-none">{{ total_trips }}</div>
+                <div class="text-sm text-slate-400 mt-2">إجمالي الشحنات</div>
+            </div>
+        </div>
+        <div class="print-card bg-slate-800 border border-slate-700 rounded-2xl p-6 flex items-center gap-5">
+            <div class="bg-emerald-500/15 text-emerald-400 w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0"><i class="fa-solid fa-circle-check"></i></div>
+            <div>
+                <div class="text-3xl font-bold leading-none text-emerald-400">{{ completed_trips }}</div>
+                <div class="text-sm text-slate-400 mt-2">شحنات مكتملة</div>
+            </div>
+        </div>
+        <div class="print-card bg-slate-800 border border-slate-700 rounded-2xl p-6 flex items-center gap-5">
+            <div class="bg-red-500/15 text-red-400 w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0"><i class="fa-solid fa-flag"></i></div>
+            <div>
+                <div class="text-3xl font-bold leading-none text-red-400">{{ suspect_trips }}</div>
+                <div class="text-sm text-slate-400 mt-2">شحنات مشبوهة</div>
+            </div>
+        </div>
+        <div class="print-card bg-slate-800 border border-slate-700 rounded-2xl p-6 flex items-center gap-5">
+            <div class="bg-amber-500/15 text-amber-400 w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0"><i class="fa-solid fa-bell"></i></div>
+            <div>
+                <div class="text-3xl font-bold leading-none text-amber-400">{{ critical_alerts }}</div>
+                <div class="text-sm text-slate-400 mt-2">إنذارات حرجة مفتوحة</div>
+            </div>
+        </div>
+        <div class="print-card bg-slate-800 border border-slate-700 rounded-2xl p-6 flex items-center gap-5">
+            <div class="bg-red-500/15 text-red-400 w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0"><i class="fa-solid fa-droplet-slash"></i></div>
+            <div>
+                <div class="text-3xl font-bold leading-none text-red-400">{{ total_loss }}</div>
+                <div class="text-sm text-slate-400 mt-2">إجمالي الفقد (لتر)</div>
+            </div>
+        </div>
+        <div class="print-card bg-slate-800 border border-slate-700 rounded-2xl p-6 flex items-center gap-5">
+            <div class="bg-slate-500/15 text-slate-300 w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0"><i class="fa-solid fa-percent"></i></div>
+            <div>
+                <div class="text-3xl font-bold leading-none">{{ avg_variance }}</div>
+                <div class="text-sm text-slate-400 mt-2">متوسط نسبة العجز %</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- توزيع حالات سلسلة الإمداد -->
+    <section class="print-card bg-slate-800 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl">
+        <div class="flex items-center gap-2 mb-6 border-b border-slate-700 pb-4">
+            <i class="fa-solid fa-diagram-project text-emerald-400 text-lg"></i>
+            <h2 class="text-lg font-bold">متابعة سلسلة الإمداد — توزيع حالات الشحنات</h2>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-5 text-center">
+            <div class="bg-slate-900 rounded-2xl p-6 border border-slate-700">
+                <div class="text-yellow-400 text-3xl font-bold">{{ pending_trips }}</div>
+                <div class="text-sm text-slate-400 mt-2">قيد الانتظار</div>
+            </div>
+            <div class="bg-slate-900 rounded-2xl p-6 border border-slate-700">
+                <div class="text-blue-400 text-3xl font-bold">{{ in_transit_trips }}</div>
+                <div class="text-sm text-slate-400 mt-2">في الطريق</div>
+            </div>
+            <div class="bg-slate-900 rounded-2xl p-6 border border-slate-700">
+                <div class="text-emerald-400 text-3xl font-bold">{{ completed_trips }}</div>
+                <div class="text-sm text-slate-400 mt-2">مكتملة</div>
+            </div>
+            <div class="bg-slate-900 rounded-2xl p-6 border border-slate-700">
+                <div class="text-red-400 text-3xl font-bold">{{ suspect_trips }}</div>
+                <div class="text-sm text-slate-400 mt-2">مشبوهة</div>
+            </div>
+            <div class="bg-slate-900 rounded-2xl p-6 border border-slate-700">
+                <div class="text-slate-300 text-3xl font-bold">{{ banned_stations }}</div>
+                <div class="text-sm text-slate-400 mt-2">محطات موقوفة</div>
+            </div>
+        </div>
+    </section>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+
+        <!-- تحليل الأداء: أعلى الرحلات فقداً -->
+        <section class="print-card bg-slate-800 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl">
+            <div class="flex items-center gap-2 mb-6 border-b border-slate-700 pb-4">
+                <i class="fa-solid fa-arrow-trend-down text-red-400 text-lg"></i>
+                <h2 class="text-lg font-bold">تحليل الأداء — أعلى الشحنات فقداً</h2>
+            </div>
+            <div class="overflow-x-auto rounded-xl border border-slate-700 bg-slate-900">
+                <table class="w-full text-right text-sm">
+                    <thead class="bg-slate-800 text-slate-300 text-xs border-b border-slate-700">
+                        <tr>
+                            <th class="px-5 py-4">رمز الشحنة</th>
+                            <th class="px-5 py-4">المحطة</th>
+                            <th class="px-5 py-4">العجز (لتر)</th>
+                            <th class="px-5 py-4 text-center">النسبة %</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800">
+                        {% for rec in top_loss %}
+                        <tr class="hover:bg-slate-800/50">
+                            <td class="px-5 py-4 font-mono text-blue-400">{{ rec.trip.trip_code }}</td>
+                            <td class="px-5 py-4 text-slate-300">{{ rec.trip.station.station_name }}</td>
+                            <td class="px-5 py-4 text-red-400 font-bold">{{ rec.variance_liters }}</td>
+                            <td class="px-5 py-4 text-center">
+                                <span class="px-2.5 py-1 rounded-full text-xs font-medium
+                                    {% if rec.variance_percent > 0.5 %}bg-red-500/10 text-red-400{% else %}bg-yellow-500/10 text-yellow-400{% endif %}">
+                                    {{ rec.variance_percent }}%
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="px-5 py-10 text-center text-slate-500">لا توجد بيانات فقد مسجّلة.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- مؤشرات المحطات -->
+        <section class="print-card bg-slate-800 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl">
+            <div class="flex items-center gap-2 mb-6 border-b border-slate-700 pb-4">
+                <i class="fa-solid fa-gas-pump text-emerald-400 text-lg"></i>
+                <h2 class="text-lg font-bold">مؤشرات أداء المحطات</h2>
+            </div>
+            <div class="overflow-x-auto rounded-xl border border-slate-700 bg-slate-900">
+                <table class="w-full text-right text-sm">
+                    <thead class="bg-slate-800 text-slate-300 text-xs border-b border-slate-700">
+                        <tr>
+                            <th class="px-5 py-4">المحطة</th>
+                            <th class="px-5 py-4 text-center">إجمالي الشحنات</th>
+                            <th class="px-5 py-4 text-center">المشبوهة</th>
+                            <th class="px-5 py-4 text-center">نسبة الاشتباه</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800">
+                        {% for st in station_stats %}
+                        <tr class="hover:bg-slate-800/50">
+                            <td class="px-5 py-4">
+                                <div class="text-slate-200 font-medium">{{ st.station_name }}</div>
+                                <div class="text-xs text-slate-400 mt-0.5">{{ st.city }}</div>
+                            </td>
+                            <td class="px-5 py-4 text-center text-slate-200">{{ st.trips_count }}</td>
+                            <td class="px-5 py-4 text-center {% if st.suspect_count > 0 %}text-red-400 font-bold{% else %}text-slate-400{% endif %}">{{ st.suspect_count }}</td>
+                            <td class="px-5 py-4 text-center">
+                                {% if st.trips_count %}
+                                <span class="text-xs {% if st.suspect_count > 0 %}text-red-400{% else %}text-emerald-400{% endif %}">
+                                    {% widthratio st.suspect_count st.trips_count 100 %}%
+                                </span>
+                                {% else %}<span class="text-slate-500">—</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="px-5 py-10 text-center text-slate-500">لا توجد محطات مسجّلة.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- التنبيهات والخرقات الحرجة -->
+    <section class="print-card bg-slate-800 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl">
+        <div class="flex items-center justify-between mb-6 border-b border-slate-700 pb-4">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-red-400 text-lg"></i>
+                <h2 class="text-lg font-bold">الخرقات الحرجة التي تتطلب تدخلاً إدارياً</h2>
+            </div>
+            <a href="{% url 'alerts:alert_list' %}" class="no-print text-xs text-emerald-400 hover:text-emerald-300 whitespace-nowrap">عرض كل الإنذارات ←</a>
+        </div>
+        <div class="space-y-4">
+            {% for alert in recent_alerts %}
+            <div class="flex items-start gap-4 bg-slate-900 border border-red-500/20 rounded-2xl p-5">
+                <div class="bg-red-500/15 text-red-400 w-11 h-11 rounded-xl flex items-center justify-center shrink-0"><i class="fa-solid fa-bolt"></i></div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="font-bold text-slate-200">{{ alert.get_alert_type_display }}</span>
+                        <span class="px-2.5 py-0.5 rounded-full text-xs bg-red-500/10 text-red-400 border border-red-500/20">{{ alert.get_severity_display }}</span>
+                        <span class="text-xs text-slate-500">{{ alert.created_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    <div class="text-sm text-slate-400 mt-2 leading-relaxed">{{ alert.description }}</div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center text-slate-500 py-10">
+                <i class="fa-solid fa-circle-check text-3xl text-emerald-500/50 mb-3 block"></i>
+                لا توجد خرقات حرجة مفتوحة حالياً.
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var el = document.getElementById('print-date');
+        if (el) el.textContent = new Date().toLocaleString('ar-EG', {
+            year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+    })();
+</script>
+{% endblock %}

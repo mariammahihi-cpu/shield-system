@@ -1,0 +1,145 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}إنشاء مستخدم{% endblock %}
+
+{% block page_title %}
+    <i class="fas fa-user-plus text-blue-400"></i> إنشاء مستخدم جديد
+{% endblock %}
+
+{% block header_actions %}
+    <a href="{% url 'users:user_list' %}" class="text-sm text-slate-300 hover:text-blue-400 flex items-center gap-2">
+        <i class="fas fa-arrow-right"></i> العودة للقائمة
+    </a>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* إصلاح خلفية الإكمال التلقائي في الوضع الداكن */
+    input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus {
+        -webkit-text-fill-color: #e2e8f0;
+        -webkit-box-shadow: 0 0 0 1000px #0f172a inset;
+        caret-color: #e2e8f0;
+    }
+    /* تنسيق القوائم متعددة الاختيار */
+    select[multiple].sh-input { min-height: 110px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+
+    {% if form.non_field_errors %}
+    <div class="mb-4 px-4 py-3 rounded-lg border bg-red-500/10 border-red-500/30 text-red-300 text-sm">
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" id="create-user-form" class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-5">
+        {% csrf_token %}
+
+        <!-- اسم المستخدم -->
+        <div>
+            <label class="block text-slate-300 text-sm mb-2">اسم المستخدم <span class="text-red-400">*</span></label>
+            {{ form.username }}
+            {% for error in form.username.errors %}<p class="text-red-400 text-xs mt-1">⚠️ {{ error }}</p>{% endfor %}
+        </div>
+
+        <!-- الاسم الكامل -->
+        <div>
+            <label class="block text-slate-300 text-sm mb-2">الاسم الكامل <span class="text-red-400">*</span></label>
+            {{ form.full_name }}
+            {% for error in form.full_name.errors %}<p class="text-red-400 text-xs mt-1">⚠️ {{ error }}</p>{% endfor %}
+        </div>
+
+        <!-- الرقم الوطني + الهاتف -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-slate-300 text-sm mb-2">الرقم الوطني <span class="text-red-400">*</span></label>
+                {{ form.national_id }}
+                {% for error in form.national_id.errors %}<p class="text-red-400 text-xs mt-1">⚠️ {{ error }}</p>{% endfor %}
+            </div>
+            <div>
+                <label class="block text-slate-300 text-sm mb-2">رقم الهاتف <span class="text-red-400">*</span></label>
+                {{ form.phone_number }}
+                {% for error in form.phone_number.errors %}<p class="text-red-400 text-xs mt-1">⚠️ {{ error }}</p>{% endfor %}
+            </div>
+        </div>
+
+        <!-- الدور -->
+        <div>
+            <label class="block text-slate-300 text-sm mb-2">الدور الوظيفي <span class="text-red-400">*</span></label>
+            {{ form.role }}
+            {% for error in form.role.errors %}<p class="text-red-400 text-xs mt-1">⚠️ {{ error }}</p>{% endfor %}
+        </div>
+
+        <!-- حقل شرطي: المستودعات (يظهر لموظف المستودع فقط) -->
+        <div id="warehouse-field" class="hidden">
+            <label class="block text-slate-300 text-sm mb-2">المستودعات المرتبطة <span class="text-red-400">*</span></label>
+            {{ form.warehouses }}
+            <p class="text-slate-500 text-xs mt-1">اضغط Ctrl لاختيار أكثر من مستودع.</p>
+            {% for error in form.warehouses.errors %}<p class="text-red-400 text-xs mt-1">⚠️ {{ error }}</p>{% endfor %}
+        </div>
+
+        <!-- حقل شرطي: المحطة (يظهر لمندوب المحطة فقط) -->
+        <div id="station-field" class="hidden">
+            <label class="block text-slate-300 text-sm mb-2">المحطة المرتبطة <span class="text-red-400">*</span></label>
+            {{ form.station }}
+            {% for error in form.station.errors %}<p class="text-red-400 text-xs mt-1">⚠️ {{ error }}</p>{% endfor %}
+        </div>
+
+        <!-- كلمة المرور + التأكيد -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-slate-300 text-sm mb-2">كلمة المرور <span class="text-red-400">*</span></label>
+                {{ form.password }}
+                <p class="text-slate-500 text-xs mt-1">8 أحرف على الأقل.</p>
+                {% for error in form.password.errors %}<p class="text-red-400 text-xs mt-1">⚠️ {{ error }}</p>{% endfor %}
+            </div>
+            <div>
+                <label class="block text-slate-300 text-sm mb-2">تأكيد كلمة المرور <span class="text-red-400">*</span></label>
+                {{ form.password_confirm }}
+                <p id="pwMatchError" class="text-red-400 text-xs mt-1 hidden">⚠️ كلمتا المرور غير متطابقتين.</p>
+                {% for error in form.password_confirm.errors %}<p class="text-red-400 text-xs mt-1">⚠️ {{ error }}</p>{% endfor %}
+            </div>
+        </div>
+
+        <!-- الأزرار -->
+        <div class="flex gap-3 pt-2">
+            <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 transition py-2.5 rounded-lg font-semibold">
+                <i class="fas fa-check ml-1"></i> إنشاء الحساب
+            </button>
+            <a href="{% url 'users:user_list' %}" class="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 transition rounded-lg text-center">إلغاء</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    // ===== إظهار/إخفاء الحقول حسب الدور =====
+    const roleSel = document.getElementById('id_role');
+    const whField = document.getElementById('warehouse-field');
+    const stField = document.getElementById('station-field');
+
+    function toggleRoleFields() {
+        const r = roleSel ? roleSel.value : '';
+        whField.classList.toggle('hidden', r !== 'dispatcher');
+        stField.classList.toggle('hidden', r !== 'agent');
+    }
+    if (roleSel) roleSel.addEventListener('change', toggleRoleFields);
+    document.addEventListener('DOMContentLoaded', toggleRoleFields);
+
+    // ===== تحقّق فوري من تطابق كلمة المرور (تجربة أفضل) =====
+    document.getElementById('create-user-form').addEventListener('submit', function (e) {
+        const p  = document.getElementById('id_password');
+        const c  = document.getElementById('id_password_confirm');
+        const err = document.getElementById('pwMatchError');
+        if (p && c && p.value !== c.value) {
+            e.preventDefault();
+            err.classList.remove('hidden');
+            c.focus();
+        }
+    });
+</script>
+{% endblock %}

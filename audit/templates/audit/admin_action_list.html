@@ -1,0 +1,116 @@
+{% extends base_template|default:'admin_base.html' %}
+
+{% block title %}الإجراءات الإدارية{% endblock %}
+
+{% block page_title %}
+    <i class="fas fa-user-shield text-blue-400"></i> الإجراءات الإدارية
+{% endblock %}
+
+{% block header_actions %}{% endblock %}
+
+{% block content %}
+
+<!-- شريط أدوات: تبويبات + تصدير -->
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+    <div class="flex gap-2 bg-slate-800 border border-slate-700 rounded-lg p-1">
+        <a href="{% url 'audit:list' %}" class="px-4 py-1.5 rounded-md text-slate-300 hover:bg-slate-700 text-sm transition">السجل العام</a>
+        <span class="px-4 py-1.5 rounded-md bg-blue-600/20 text-blue-300 text-sm font-semibold">الإجراءات الإدارية</span>
+    </div>
+    <a href="?export=excel&action={{ action_filter }}&q={{ search }}&from={{ date_from }}&to={{ date_to }}"
+       class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+        <i class="fas fa-file-excel"></i> تصدير Excel
+    </a>
+</div>
+
+<!-- بحث وفلترة -->
+<form method="get" class="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-6 flex flex-wrap items-end gap-3">
+    <div class="flex-1 min-w-[200px]">
+        <label class="block text-slate-400 text-xs mb-1">بحث</label>
+        <input type="text" name="q" value="{{ search }}" placeholder="المستخدم أو المنفِّذ أو المبرّر..."
+               class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+    </div>
+    <div>
+        <label class="block text-slate-400 text-xs mb-1">نوع الإجراء</label>
+        <select name="action" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+            <option value="">كل الإجراءات</option>
+            {% for val, label in action_choices %}
+            <option value="{{ val }}" {% if action_filter == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block text-slate-400 text-xs mb-1">من تاريخ</label>
+        <input type="date" name="from" value="{{ date_from }}" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+    </div>
+    <div>
+        <label class="block text-slate-400 text-xs mb-1">إلى تاريخ</label>
+        <input type="date" name="to" value="{{ date_to }}" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+    </div>
+    <button class="bg-blue-600 hover:bg-blue-700 transition px-5 py-2 rounded-lg text-sm font-semibold">
+        <i class="fas fa-filter ml-1"></i> تصفية
+    </button>
+</form>
+
+<!-- الجدول -->
+<div class="bg-slate-800 border border-slate-700 rounded-xl overflow-x-auto">
+    <table class="w-full text-sm text-right">
+        <thead class="bg-slate-900/60 text-slate-400 uppercase text-xs">
+            <tr>
+                <th class="px-4 py-3">الإجراء</th>
+                <th class="px-4 py-3">المستخدم المستهدف</th>
+                <th class="px-4 py-3">المنفِّذ</th>
+                <th class="px-4 py-3">المبرّر</th>
+                <th class="px-4 py-3">الحالة</th>
+                <th class="px-4 py-3">الوقت</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-700">
+        {% for a in page_obj %}
+            <tr class="hover:bg-slate-700/30 transition">
+                <td class="px-4 py-3">
+                    <span class="px-2.5 py-1 rounded-full text-xs font-medium border inline-flex items-center gap-1
+                        {% if a.action_type == 'ban' %}bg-red-500/15 text-red-300 border-red-500/30
+                        {% elif a.action_type == 'auto_lock' %}bg-orange-500/15 text-orange-300 border-orange-500/30
+                        {% elif a.action_type == 'suspend' %}bg-yellow-500/15 text-yellow-300 border-yellow-500/30
+                        {% elif a.action_type == 'unlock' %}bg-emerald-500/15 text-emerald-300 border-emerald-500/30
+                        {% else %}bg-blue-500/15 text-blue-300 border-blue-500/30{% endif %}">
+                        {% if a.action_type == 'ban' %}<i class="fas fa-ban"></i>
+                        {% elif a.action_type == 'auto_lock' %}<i class="fas fa-lock"></i>
+                        {% elif a.action_type == 'unlock' %}<i class="fas fa-lock-open"></i>
+                        {% elif a.action_type == 'suspend' %}<i class="fas fa-pause"></i>
+                        {% else %}<i class="fas fa-shield-halved"></i>{% endif %}
+                        {{ a.get_action_type_display }}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-slate-200">{{ a.target_user.full_name|default:a.target_user.username }}</td>
+                <td class="px-4 py-3 text-slate-400">
+                    {% if a.admin_user %}{{ a.admin_user.full_name|default:a.admin_user.username }}
+                    {% else %}<span class="text-orange-300"><i class="fas fa-robot text-xs"></i> النظام (تلقائي)</span>{% endif %}
+                </td>
+                <td class="px-4 py-3 text-slate-300 text-xs max-w-xs whitespace-normal break-words">{{ a.reason }}</td>
+                <td class="px-4 py-3">
+                    {% if a.is_active %}
+                        <span class="inline-flex items-center gap-1.5 bg-emerald-500/15 text-emerald-400 px-2.5 py-1 rounded-full text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> سارٍ</span>
+                    {% else %}
+                        <span class="inline-flex items-center gap-1.5 bg-slate-500/20 text-slate-400 px-2.5 py-1 rounded-full text-xs font-medium"><i class="fas fa-check text-[10px]"></i> منتهٍ</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-slate-400 text-xs">{{ a.created_at|date:"Y/m/d H:i" }}</td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">لا توجد إجراءات مطابقة</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ترقيم الصفحات (يحفظ كل الفلاتر) -->
+{% if page_obj.has_other_pages %}
+<div class="flex justify-center gap-2 mt-6">
+    {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&action={{ action_filter }}&q={{ search }}&from={{ date_from }}&to={{ date_to }}" class="px-3 py-1 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700">السابق</a>{% endif %}
+    <span class="px-3 py-1 text-slate-400">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&action={{ action_filter }}&q={{ search }}&from={{ date_from }}&to={{ date_to }}" class="px-3 py-1 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700">التالي</a>{% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

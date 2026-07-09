@@ -1,0 +1,38 @@
+{% extends base_template|default:'users/admin_base.html' %}
+{% block page_title %}<i class="fas fa-bell text-blue-400"></i> الإشعارات{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-3">
+
+    {% for a in alerts %}
+    <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4 flex gap-4
+                border-r-4 {% if a.severity == 'critical' %}border-r-red-500{% elif a.severity == 'medium' %}border-r-amber-500{% else %}border-r-blue-500{% endif %}">
+        <div class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center
+                    {% if a.severity == 'critical' %}bg-red-500/15 text-red-400{% elif a.severity == 'medium' %}bg-amber-500/15 text-amber-400{% else %}bg-blue-500/15 text-blue-400{% endif %}">
+            <i class="fas {% if a.alert_type == 'geofence_violation' %}fa-location-dot{% elif a.alert_type == 'seal_tampering' %}fa-qrcode{% elif a.alert_type == 'unauthorized_device' %}fa-mobile-screen{% else %}fa-triangle-exclamation{% endif %}"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2 mb-1">
+                <h3 class="font-semibold text-white text-sm">{{ a.get_alert_type_display }}</h3>
+                <span class="text-slate-500 text-xs whitespace-nowrap">{{ a.created_at|date:"Y/m/d H:i" }}</span>
+            </div>
+            <p class="text-slate-300 text-sm leading-relaxed">{{ a.description }}</p>
+            <div class="flex items-center gap-3 mt-2 text-xs">
+                <span class="text-slate-500">الرحلة: <span dir="ltr">{{ a.trip.trip_code }}</span></span>
+                {% if a.is_resolved %}
+                    <span class="text-emerald-400"><i class="fas fa-check"></i> مُعالج</span>
+                {% else %}
+                    <span class="text-amber-400"><i class="fas fa-clock"></i> مفتوح</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-16 text-slate-500">
+        <i class="fas fa-bell-slash text-4xl mb-3 block"></i>
+        لا توجد إشعارات متاحة حالياً.
+    </div>
+    {% endfor %}
+
+</div>
+{% endblock %}

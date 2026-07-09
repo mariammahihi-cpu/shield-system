@@ -1,0 +1,107 @@
+{% extends base_template|default:'admin_base.html' %}
+
+{% block title %}سجل التدقيق{% endblock %}
+
+{% block page_title %}
+    <i class="fas fa-clipboard-list text-blue-400"></i> سجل التدقيق
+{% endblock %}
+
+{# الهيدر صار نظيف — بدون أزرار محشورة #}
+{% block header_actions %}{% endblock %}
+
+{% block content %}
+
+<!-- شريط أدوات: تبويبات + تصدير -->
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+    <div class="flex gap-2 bg-slate-800 border border-slate-700 rounded-lg p-1">
+        <span class="px-4 py-1.5 rounded-md bg-blue-600/20 text-blue-300 text-sm font-semibold">السجل العام</span>
+        <a href="{% url 'audit:actions' %}" class="px-4 py-1.5 rounded-md text-slate-300 hover:bg-slate-700 text-sm transition">الإجراءات الإدارية</a>
+    </div>
+    <a href="?export=excel&q={{ search }}&table={{ table_filter }}&from={{ date_from }}&to={{ date_to }}"
+       class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+        <i class="fas fa-file-excel"></i> تصدير Excel
+    </a>
+</div>
+
+<!-- بحث وفلترة -->
+<form method="get" class="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-6 flex flex-wrap items-end gap-3">
+    <div class="flex-1 min-w-[200px]">
+        <label class="block text-slate-400 text-xs mb-1">بحث</label>
+        <input type="text" name="q" value="{{ search }}" placeholder="نوع الإجراء أو المستخدم..."
+               class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+    </div>
+    <div>
+        <label class="block text-slate-400 text-xs mb-1">الجدول</label>
+        <select name="table" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+            <option value="">كل الجداول</option>
+            {% for t in tables %}
+            <option value="{{ t }}" {% if table_filter == t %}selected{% endif %}>{{ t }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block text-slate-400 text-xs mb-1">من تاريخ</label>
+        <input type="date" name="from" value="{{ date_from }}" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+    </div>
+    <div>
+        <label class="block text-slate-400 text-xs mb-1">إلى تاريخ</label>
+        <input type="date" name="to" value="{{ date_to }}" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+    </div>
+    <button class="bg-blue-600 hover:bg-blue-700 transition px-5 py-2 rounded-lg text-sm font-semibold">
+        <i class="fas fa-filter ml-1"></i> تصفية
+    </button>
+</form>
+
+<!-- الجدول -->
+<div class="bg-slate-800 border border-slate-700 rounded-xl overflow-x-auto">
+    <table class="w-full text-sm text-right">
+        <thead class="bg-slate-900/60 text-slate-400 uppercase text-xs">
+            <tr>
+                <th class="px-4 py-3">الإجراء</th>
+                <th class="px-4 py-3">الجدول</th>
+                <th class="px-4 py-3">المعرّف</th>
+                <th class="px-4 py-3">المستخدم</th>
+                <th class="px-4 py-3">IP</th>
+                <th class="px-4 py-3">التغيير</th>
+                <th class="px-4 py-3">الوقت</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-700">
+        {% for log in page_obj %}
+            <tr class="hover:bg-slate-700/30 transition {% if log.action in suspicious_actions %}bg-red-500/5{% endif %}">
+                <td class="px-4 py-3">
+                    {% if log.action in suspicious_actions %}
+                        <span class="bg-red-500/15 text-red-300 border border-red-500/30 px-2 py-1 rounded-lg text-xs inline-flex items-center gap-1">
+                            <i class="fas fa-triangle-exclamation"></i> {{ log.action }}
+                        </span>
+                    {% else %}
+                        <span class="bg-blue-500/15 text-blue-300 border border-blue-500/30 px-2 py-1 rounded-lg text-xs">{{ log.action }}</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-slate-400 font-mono text-xs">{{ log.target_table }}</td>
+                <td class="px-4 py-3 text-slate-400">{{ log.target_id|default:"—" }}</td>
+                <td class="px-4 py-3">{{ log.user.full_name|default:log.user.username|default:"نظام" }}</td>
+                <td class="px-4 py-3 text-slate-500 font-mono text-xs">{{ log.ip_address|default:"—" }}</td>
+                <td class="px-4 py-3 text-xs">
+                    {% if log.old_value %}<span class="text-red-300">{{ log.old_value }}</span> ← {% endif %}
+                    <span class="text-green-300">{{ log.new_value|default:"—" }}</span>
+                </td>
+                <td class="px-4 py-3 text-slate-400 text-xs">{{ log.timestamp|date:"Y/m/d H:i" }}</td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="7" class="px-4 py-8 text-center text-slate-500">لا توجد سجلات مطابقة</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ترقيم الصفحات -->
+{% if page_obj.has_other_pages %}
+<div class="flex justify-center gap-2 mt-6">
+    {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&q={{ search }}&table={{ table_filter }}&from={{ date_from }}&to={{ date_to }}" class="px-3 py-1 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700">السابق</a>{% endif %}
+    <span class="px-3 py-1 text-slate-400">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&q={{ search }}&table={{ table_filter }}&from={{ date_from }}&to={{ date_to }}" class="px-3 py-1 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700">التالي</a>{% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

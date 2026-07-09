@@ -1,0 +1,59 @@
+{% extends base_template|default:'dispatcher_base.html' %}
+{% block title %}رمز QR — {{ trip.trip_code }}{% endblock %}
+{% block page_title %}<i class="fa-solid fa-qrcode text-blue-500"></i> رمز QR للرحلة {{ trip.trip_code }}{% endblock %}
+
+{% block header_actions %}
+<button onclick="window.print()" class="no-print bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2">
+    <i class="fa-solid fa-print"></i> طباعة الرمز
+</button>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+    @media print {
+        body * { visibility: hidden; }
+        #print-area, #print-area * { visibility: visible; }
+        #print-area { position: absolute; inset: 0; margin: auto; }
+        .no-print { display: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <!-- البطاقة القابلة للطباعة -->
+    <div id="print-area" class="bg-white text-slate-900 rounded-2xl p-8 text-center shadow-xl">
+        <h2 class="text-xl font-bold mb-1">Shield — بطاقة الشحنة</h2>
+        <div class="font-mono text-lg font-bold text-blue-700 mb-4" dir="ltr">{{ trip.trip_code }}</div>
+
+        <div id="qrcode" class="flex justify-center mb-4"></div>
+
+        <div class="text-sm space-y-1 text-right border-t pt-3">
+            <div><b>المحطة:</b> {{ trip.station.station_name }}</div>
+            <div><b>الشاحنة:</b> {{ trip.truck.truck_id }} — {{ trip.truck.driver.driver_name }}</div>
+            <div><b>الأختام:</b> <span dir="ltr">{{ trip.seal_numbers }}</span></div>
+        </div>
+        <p class="text-xs text-slate-500 mt-4">يُمسح هذا الرمز عند التفريغ للتحقق من صحة الشحنة.</p>
+    </div>
+
+    <!-- رسالة فشل التوليد (المجرى البديل) -->
+    <div id="qr-error" class="hidden mt-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm no-print">
+        ⚠️ فشل توليد الرمز. <button onclick="location.reload()" class="underline font-semibold">إعادة المحاولة</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+    try {
+        new QRCode(document.getElementById('qrcode'), {
+            text: "{{ qr_url|escapejs }}",
+            width: 220, height: 220,
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    } catch (e) {
+        document.getElementById('qr-error').classList.remove('hidden');
+    }
+</script>
+{% endblock %}

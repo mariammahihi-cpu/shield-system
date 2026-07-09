@@ -1,0 +1,74 @@
+{% extends 'auditor_base.html' %}
+{% block title %}لوحة المراقبة{% endblock %}
+{% block page_title %}<i class="fa-solid fa-gauge-high text-amber-400"></i> لوحة المراقبة{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- بطاقات المؤشرات -->
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+            <div class="flex items-center justify-between">
+                <div><div class="text-2xl font-bold text-amber-400">{{ open_alerts }}</div><div class="text-xs text-slate-400 mt-1">إنذارات مفتوحة</div></div>
+                <div class="bg-amber-500/15 text-amber-400 w-11 h-11 rounded-xl flex items-center justify-center"><i class="fa-solid fa-bell"></i></div>
+            </div>
+        </div>
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+            <div class="flex items-center justify-between">
+                <div><div class="text-2xl font-bold text-red-400">{{ critical_alerts }}</div><div class="text-xs text-slate-400 mt-1">إنذارات حرجة</div></div>
+                <div class="bg-red-500/15 text-red-400 w-11 h-11 rounded-xl flex items-center justify-center"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            </div>
+        </div>
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+            <div class="flex items-center justify-between">
+                <div><div class="text-2xl font-bold text-blue-400">{{ weekly_alerts }}</div><div class="text-xs text-slate-400 mt-1">هذا الأسبوع</div></div>
+                <div class="bg-blue-500/15 text-blue-400 w-11 h-11 rounded-xl flex items-center justify-center"><i class="fa-solid fa-calendar-week"></i></div>
+            </div>
+        </div>
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+            <div class="flex items-center justify-between">
+                <div><div class="text-2xl font-bold text-orange-400">{{ geofence_alerts }}</div><div class="text-xs text-slate-400 mt-1">تجاوز جيوفينس</div></div>
+                <div class="bg-orange-500/15 text-orange-400 w-11 h-11 rounded-xl flex items-center justify-center"><i class="fa-solid fa-location-dot"></i></div>
+            </div>
+        </div>
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+            <div class="flex items-center justify-between">
+                <div><div class="text-2xl font-bold text-purple-400">{{ volume_alerts }}</div><div class="text-xs text-slate-400 mt-1">عجز حجمي (ASTM)</div></div>
+                <div class="bg-purple-500/15 text-purple-400 w-11 h-11 rounded-xl flex items-center justify-center"><i class="fa-solid fa-droplet-slash"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- أحدث الإنذارات المفتوحة -->
+    <section class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl">
+        <div class="flex items-center justify-between mb-4 border-b border-slate-700 pb-3">
+            <h2 class="text-base font-bold flex items-center gap-2"><i class="fa-solid fa-list-check text-amber-400"></i> أحدث الإنذارات المفتوحة</h2>
+            <a href="{% url 'alerts:alert_list' %}" class="text-xs text-amber-400 hover:text-amber-300">عرض الكل <i class="fa-solid fa-arrow-left"></i></a>
+        </div>
+
+        <div class="space-y-2">
+            {% for a in recent_alerts %}
+            <a href="{% url 'alerts:alert_detail' a.id %}"
+               class="flex items-center justify-between gap-3 bg-slate-900 border border-slate-700 rounded-lg p-3 hover:border-amber-500/40 transition
+               border-r-4 {% if a.severity == 'critical' %}border-r-red-500{% elif a.severity == 'medium' %}border-r-amber-500{% else %}border-r-blue-500{% endif %}">
+                <div class="min-w-0">
+                    <div class="font-semibold text-sm text-white">{{ a.get_alert_type_display }}</div>
+                    <div class="text-xs text-slate-400 truncate">{{ a.description }}</div>
+                    <div class="text-xs text-slate-500 mt-0.5">رحلة <span dir="ltr">{{ a.trip.trip_code }}</span> · {{ a.created_at|date:"Y/m/d H:i" }}</div>
+                </div>
+                <span class="shrink-0 text-xs font-medium px-2.5 py-1 rounded-full
+                    {% if a.severity == 'critical' %}bg-red-500/15 text-red-400{% elif a.severity == 'medium' %}bg-amber-500/15 text-amber-400{% else %}bg-blue-500/15 text-blue-400{% endif %}">
+                    {{ a.get_severity_display }}
+                </span>
+            </a>
+            {% empty %}
+            <div class="text-center py-12 text-slate-500">
+                <i class="fa-solid fa-shield-halved text-3xl mb-2 block text-emerald-500/40"></i>
+                لا توجد إنذارات مفتوحة — الوضع مستقر ✅
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+</div>
+{% endblock %}

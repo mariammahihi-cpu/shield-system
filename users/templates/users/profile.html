@@ -1,0 +1,481 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الملف الشخصي - منظومة Shield</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Tajawal', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f7fafc;
+            padding: 30px 20px;
+            color: #334155;
+        }
+
+        .container {
+            max-width: 1050px;
+            margin: 0 auto;
+        }
+
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 25px;
+            color: #476596;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            transition: color 0.2s;
+        }
+
+        .nav-back:hover {
+            color: #13366d;
+        }
+
+        /* الرأس الموحد بتدرج Shield الرسمي */
+        .profile-header {
+            background: linear-gradient(145deg, #476596 0%, #13366d 100%);
+            color: white;
+            padding: 35px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 25px rgba(19, 54, 109, 0.15);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .user-info h1 {
+            font-size: 26px;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .user-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 35px;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .detail-label {
+            font-size: 12px;
+            opacity: 0.75;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .logout-btn {
+            padding: 12px 22px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.22);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* البطاقات المعدلة */
+        .card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 25px rgba(139, 189, 246, 0.15);
+            border: 1px solid #e2e8f0;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1.5px solid #f1f5f9;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #13366d;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* الجداول الاحترافية */
+        .sessions-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .sessions-table th {
+            padding: 16px;
+            text-align: right;
+            font-weight: 700;
+            color: #476596;
+            font-size: 14px;
+            background-color: #f8fafc;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .sessions-table td {
+            padding: 16px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+            color: #334155;
+            vertical-align: middle;
+        }
+
+        .sessions-table tbody tr:hover {
+            background-color: #f8fafc;
+            transition: background-color 0.2s ease;
+        }
+
+        /* الحالات والألوان الموثوقة والمريبة */
+        .badge-trusted {
+            display: inline-block;
+            padding: 6px 12px;
+            background-color: #f0fdf4;
+            color: #196f2e;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .badge-suspicious {
+            display: inline-block;
+            padding: 6px 12px;
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fca5a5;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        /* الأزرار المحدثة بألوان متناسقة مع تسجيل الدخول */
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-danger {
+            background-color: #e11d48;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #be123c;
+            box-shadow: 0 4px 12px rgba(225, 29, 72, 0.2);
+        }
+
+        .btn-success {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #047857;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+        }
+
+        /* نظام التنبيهات الموحد مع واجهة تسجيل الدخول */
+        .alert-box {
+            border: 1px solid;
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            line-height: 1.5;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #94a3b8;
+        }
+
+        .empty-state-icon {
+            font-size: 40px;
+            margin-bottom: 15px;
+            color: #cbd5e1;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-15px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Responsive الاستجابة للشاشات المختلفة */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .user-details {
+                flex-direction: column;
+                gap: 20px;
+            }
+            .sessions-table {
+                display: block;
+                overflow-x: auto;
+            }
+            .action-buttons {
+                flex-direction: column;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .logout-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <a href="{% url 'trips:trip_list' %}" class="nav-back">
+            <i class="fa-solid fa-arrow-right"></i> العودة للرحلات
+        </a>
+
+        <div class="profile-header">
+            <div class="header-content">
+                <div class="user-info">
+                    <h1><i class="fa-solid fa-circle-user"></i> {{ user.full_name }}</h1>
+                    <div class="user-details">
+                        <div class="detail-item">
+                            <span class="detail-label">اسم الحساب</span>
+                            <span class="detail-value">{{ user.username }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">الدور الوظيفي</span>
+                            <span class="detail-value">
+                                <span class="badge">{{ user.get_role_display }}</span>
+                            </span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">البريد الإلكتروني</span>
+                            <span class="detail-value">{{ user.email }}</span>
+                        </div>
+                        {% if user.phone_number %}
+                            <div class="detail-item">
+                                <span class="detail-label">رقم الهاتف</span>
+                                <span class="detail-value" dir="ltr">{{ user.phone_number }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <form method="POST" action="{% url 'users:logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="logout-btn">
+                            <i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert-box" style="
+                    background-color: {% if message.tags == 'error' %}#fee2e2{% elif message.tags == 'warning' %}#fffbf0{% else %}#f0fdf4{% endif %};
+                    color: {% if message.tags == 'error' %}#b91c1c{% elif message.tags == 'warning' %}#d68910{% else %}#196f2e{% endif %};
+                    border-color: {% if message.tags == 'error' %}#fca5a5{% elif message.tags == 'warning' %}#fde047{% else %}#bbf7d0{% endif %};
+                ">
+                    {% if message.tags == 'error' %}<strong><i class="fa-solid fa-circle-xmark"></i> خطأ: </strong>{% elif message.tags == 'warning' %}<strong><i class="fa-solid fa-triangle-exclamation"></i> تنبيه: </strong>{% else %}<strong><i class="fa-solid fa-circle-check"></i> نجاح: </strong>{% endif %}{{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title"><i class="fa-solid fa-laptop-code"></i> جلسات المتصفح الموثوقة</h2>
+            </div>
+
+            {% if browser_sessions %}
+                <div class="alert-box" style="background-color: #eff6ff; color: #1e40af; border-color: #bfdbfe;">
+                    <strong><i class="fa-solid fa-circle-info"></i> معلومة:</strong> هذه قائمة بجميع المتصفحات والأجهزة التي دخلت من خلالها لحسابك. يمكنك إلغاء ثقة أي متصفح لا تتذكر استخدامه.
+                </div>
+
+                <table class="sessions-table">
+                    <thead>
+                        <tr>
+                            <th><i class="fa-solid fa-globe"></i> نوع المتصفح</th>
+                            <th><i class="fa-solid fa-calendar-days"></i> تاريخ التسجيل</th>
+                            <th><i class="fa-solid fa-clock"></i> آخر استخدام</th>
+                            <th><i class="fa-solid fa-shield-halved"></i> حالة الثقة</th>
+                            <th><i class="fa-solid fa-gears"></i> الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in browser_sessions %}
+                            <tr>
+                                <td>
+                                    <code style="background-color: #f1f5f9; padding: 6px 10px; border-radius: 6px; font-size: 13px; color: #475569;">
+                                        {{ session.user_agent|truncatechars:60 }}
+                                    </code>
+                                </td>
+                                <td>{{ session.created_at|date:"d/m/Y H:i" }}</td>
+                                <td>{{ session.last_used_at|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    {% if session.is_trusted %}
+                                        <span class="badge-trusted"><i class="fa-solid fa-check-double"></i> موثوق</span>
+                                    {% else %}
+                                        <span class="badge-suspicious"><i class="fa-solid fa-circle-exclamation"></i> مريب</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        {% if session.is_trusted %}
+                                            <form method="POST" action="{% url 'users:revoke_session' session.id %}" style="display: inline;">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger" onclick="return confirm('هل تريد فعلاً إلغاء ثقة هذا المتصفح؟');">
+                                                    <i class="fa-solid fa-lock"></i> إلغاء الثقة
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            <form method="POST" action="{% url 'users:trust_session' session.id %}" style="display: inline;">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-success">
+                                                    <i class="fa-solid fa-user-shield"></i> توثيق المتصفح
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fa-solid fa-ban"></i></div>
+                    <p>لا توجد جلسات متصفح مسجلة حالياً.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title"><i class="fa-solid fa-key"></i> معلومات الأمان</h2>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                <div style="padding: 20px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <strong style="display: block; margin-bottom: 10px; color: #13366d;"><i class="fa-solid fa-user-lock"></i> حالة الحساب</strong>
+                    {% if user.is_locked %}
+                        <span style="color: #e11d48; font-weight: bold;"><i class="fa-solid fa-circle-exclamation"></i> الحساب مقفول</span>
+                        <small style="display: block; margin-top: 8px; color: #64748b; line-height: 1.4;">الحساب مقفول بسبب محاولات دخول فاشلة متعددة. اتصل بالمسؤول لفتح الحساب.</small>
+                    {% else %}
+                        <span style="color: #10b981; font-weight: bold;"><i class="fa-solid fa-circle-check"></i> الحساب آمن ونشط</span>
+                    {% endif %}
+                </div>
+
+                <div style="padding: 20px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <strong style="display: block; margin-bottom: 10px; color: #13366d;"><i class="fa-solid fa-triangle-exclamation"></i> محاولات الدخول الفاشلة</strong>
+                    <span style="font-size: 20px; font-weight: 800; color: #476596;">{{ login_attempts }}/5</span>
+                    <small style="display: block; margin-top: 8px; color: #64748b; line-height: 1.4;">
+                        {% if login_attempts == 0 %}
+                            آمن - لا توجد محاولات فاشلة.
+                        {% elif login_attempts < 5 %}
+                            رصد {{ login_attempts }} محاولات خاطئة.
+                        {% else %}
+                            تجاوز الحد المسموح.
+                        {% endif %}
+                    </small>
+                </div>
+
+                <div style="padding: 20px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <strong style="display: block; margin-bottom: 10px; color: #13366d;"><i class="fa-solid fa-display"></i> الأجهزة المتصلة</strong>
+                    <span style="font-size: 20px; font-weight: 800; color: #476596;">{{ browser_sessions|length }}</span>
+                    <small style="display: block; margin-top: 8px; color: #64748b; line-height: 1.4;">عدد المتصفحات المسموح لها بالوصول حالياً.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // إزالة التنبيهات بنعومة بعد 6 ثوانٍ
+        document.querySelectorAll('.alert-box').forEach(alert => {
+            setTimeout(() => {
+                alert.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                alert.style.opacity = '0';
+                alert.style.transform = 'translateY(-10px)';
+                setTimeout(() => alert.remove(), 300);
+            }, 6000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+{% extends 'manager_base.html' %}
+{% block title %}التنبيهات الحرجة{% endblock %}
+{% block page_title %}<i class="fas fa-triangle-exclamation text-red-400"></i> متابعة التنبيهات الحرجة{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-4">
+
+    {% for a in alerts %}
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 border-r-4 border-r-red-500">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="bg-red-500/15 text-red-400 text-xs font-medium px-2.5 py-1 rounded-full">حرج</span>
+                    <h3 class="font-bold text-white">{{ a.get_alert_type_display }}</h3>
+                    <span class="inline-flex items-center gap-1 bg-amber-500/15 text-amber-400 text-xs px-2 py-0.5 rounded-full"><i class="fas fa-clock"></i> معلّق</span>
+                </div>
+                <p class="text-slate-300 text-sm leading-relaxed">{{ a.description }}</p>
+                <div class="flex flex-wrap items-center gap-4 mt-2 text-xs text-slate-500">
+                    <span>الرحلة: <span dir="ltr">{{ a.trip.trip_code }}</span></span>
+                    <span>المحطة: {{ a.trip.station.station_name }}</span>
+                    <span>{{ a.created_at|date:"Y/m/d H:i" }}</span>
+                </div>
+            </div>
+            <button type="button"
+                    onclick="openDecision('{% url 'dashboard:critical_alert_action' a.id %}', '{{ a.get_alert_type_display|escapejs }} — {{ a.trip.trip_code|escapejs }}')"
+                    class="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-4 py-2 rounded-lg whitespace-nowrap">
+                <i class="fas fa-gavel ml-1"></i> قرار إداري
+            </button>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-16 text-slate-500">
+        <i class="fas fa-shield-halved text-4xl mb-3 block text-emerald-500/40"></i>
+        لا توجد تنبيهات حرجة معلّقة حالياً. الوضع مستقر ✅
+    </div>
+    {% endfor %}
+
+</div>
+
+<!-- مودال القرار الإداري -->
+<div id="decisionModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[105] hidden items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+        <div class="flex items-center gap-3 mb-3">
+            <div class="bg-red-500/15 text-red-400 p-2.5 rounded-xl"><i class="fas fa-gavel text-lg"></i></div>
+            <h3 class="text-lg font-bold text-white">قرار إداري حاسم</h3>
+        </div>
+        <p id="decisionAlertDesc" class="text-slate-400 text-sm mb-4"></p>
+        <form id="decisionForm" method="post">
+            {% csrf_token %}
+            <label class="block text-slate-300 text-sm mb-2">ملاحظة القرار (اختياري)</label>
+            <textarea name="note" rows="2" class="sh-input resize-none mb-4" placeholder="تفاصيل إضافية عن القرار..."></textarea>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button type="submit" name="decision" value="stop_station" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg text-sm"><i class="fas fa-ban ml-1"></i> إيقاف المحطة</button>
+                <button type="submit" name="decision" value="maintenance" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 rounded-lg text-sm"><i class="fas fa-screwdriver-wrench ml-1"></i> صيانة طارئة</button>
+                <button type="submit" name="decision" value="approve" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-sm"><i class="fas fa-check ml-1"></i> اعتماد ومعالجة</button>
+            </div>
+            <button type="button" onclick="closeDecision()" class="w-full mt-3 bg-slate-700 hover:bg-slate-600 text-slate-200 py-2 rounded-lg text-sm">إلغاء</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openDecision(url, desc) {
+        document.getElementById('decisionForm').action = url;
+        document.getElementById('decisionAlertDesc').textContent = 'الحالة: ' + desc;
+        const m = document.getElementById('decisionModal');
+        m.classList.remove('hidden'); m.classList.add('flex');
+    }
+    function closeDecision() {
+        const m = document.getElementById('decisionModal');
+        m.classList.add('hidden'); m.classList.remove('flex');
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDecision(); });
+</script>
+{% endblock %}

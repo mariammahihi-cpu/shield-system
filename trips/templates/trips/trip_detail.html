@@ -1,0 +1,183 @@
+{% extends base_template|default:'dispatcher_base.html' %}
+{% block title %}تفاصيل الشحنة {{ trip.trip_code }}{% endblock %}
+
+{% block page_title %}
+    <i class="fa-solid fa-file-invoice text-blue-500"></i>
+    تفاصيل ومتابعة الشحنة — {{ trip.trip_code }}
+{% endblock %}
+
+{% block extra_head %}
+<style>
+    @media print {
+        body * { visibility: hidden; }
+        #qr-print-area, #qr-print-area * { visibility: visible; }
+        #qr-print-area { position: absolute; inset: 0; margin: auto; width: 100%; }
+        .no-print { display: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block header_actions %}
+    <span class="px-3 py-1.5 rounded-full text-xs font-bold border inline-block
+        {% if trip.status == 'pending' %}bg-yellow-500/10 text-yellow-400 border-yellow-500/30
+        {% elif trip.status == 'in_transit' %}bg-blue-500/10 text-blue-400 border-blue-500/30
+        {% elif trip.status == 'completed' %}bg-emerald-500/10 text-emerald-400 border-emerald-500/30
+        {% elif trip.status == 'suspect' %}bg-red-500/10 text-red-400 border-red-500/30
+        {% else %}bg-slate-500/10 text-slate-400 border-slate-500/30{% endif %}">
+        {{ trip.get_status_display }}
+    </span>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <div class="lg:col-span-2 space-y-6">
+        <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl">
+            <div class="flex items-center gap-2 mb-6 border-b border-slate-700 pb-4">
+                <i class="fa-solid fa-truck-field text-blue-500 text-lg"></i>
+                <h2 class="text-lg font-bold">بيانات الشحنة والتحميل</h2>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-6 text-sm">
+                <div>
+                    <div class="text-slate-400 text-xs mb-1.5">المندوب المستلم</div>
+                    <div class="font-bold text-slate-200">{{ trip.agent.full_name|default:trip.agent.username }}</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 text-xs mb-1.5">المحطة</div>
+                    <div class="font-bold text-slate-200">{{ trip.station.station_name }}</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 text-xs mb-1.5">المستودع</div>
+                    <div class="font-bold text-slate-200">{{ trip.warehouse.warehouse_name }}</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 text-xs mb-1.5">الشاحنة / السائق</div>
+                    <div class="font-bold text-slate-200">{{ trip.truck.truck_id }} — {{ trip.truck.driver.driver_name }}</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 text-xs mb-1.5">الحجم الظاهري المحمّل</div>
+                    <div class="font-bold text-slate-200">{{ trip.shipped_volume_ambient }} لتر</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 text-xs mb-1.5">الحجم القياسي (15°C)</div>
+                    <div class="font-bold text-slate-200">{{ trip.shipped_volume_15c }} لتر</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 text-xs mb-1.5">درجة الحرارة</div>
+                    <div class="font-bold text-slate-200">{{ trip.shipped_temperature }} °C</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 text-xs mb-1.5">الكثافة</div>
+                    <div class="font-bold text-slate-200">{{ trip.shipped_density }}</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 text-xs mb-1.5">تاريخ الإنشاء</div>
+                    <div class="font-bold text-slate-200">{{ trip.created_at|date:"Y-m-d H:i" }}</div>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-5 border-t border-slate-700">
+                <div class="text-slate-400 text-xs mb-1.5"><i class="fa-solid fa-lock text-yellow-500 ml-1"></i> الأرقام التسلسلية للأختام الأمنية</div>
+                <div class="font-bold text-slate-200 font-mono bg-slate-900 border border-slate-700 rounded-lg px-4 py-3">{{ trip.seal_numbers }}</div>
+            </div>
+
+            {% if trip.notes %}
+            <div class="mt-4">
+                <div class="text-slate-400 text-xs mb-1.5">ملاحظات</div>
+                <div class="text-slate-300 text-sm">{{ trip.notes }}</div>
+            </div>
+            {% endif %}
+        </section>
+
+        {% if discharge_record %}
+        <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl">
+            <div class="flex items-center gap-2 mb-6 border-b border-slate-700 pb-4">
+                <i class="fa-solid fa-flask-vial text-emerald-500 text-lg"></i>
+                <h2 class="text-lg font-bold">نتيجة التفريغ الميداني</h2>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-6 text-sm">
+                <div>
+                    <div class="text-slate-400 text-xs mb-1.5">الحجم المفرّغ (15°C)</div>
+                    <div class="font-bold text-slate-200">{{ discharge_record.discharge_volume_15c }} لتر</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 text-xs mb-1.5">فارق العجز</div>
+                    <div class="font-bold {% if discharge_record.variance_liters > 0 %}text-red-400{% else %}text-emerald-400{% endif %}">{{ discharge_record.variance_liters }} لتر ({{ discharge_record.variance_percent }}%)</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 text-xs mb-1.5">النطاق الجغرافي</div>
+                    <div class="font-bold text-slate-200">{{ discharge_record.get_geofence_status_display }}</div>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+    </div>
+
+    <div class="space-y-6">
+        <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+            <div class="flex items-center justify-between gap-2 mb-5 border-b border-slate-700 pb-4">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-qrcode text-blue-500 text-lg"></i>
+                    <h2 class="text-base font-bold">رمز الشحنة الرقمي (QR)</h2>
+                </div>
+                {% if qr_image %}
+                <button onclick="window.print()" class="no-print inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm font-semibold">
+                    <i class="fa-solid fa-print"></i> طباعة
+                </button>
+                {% endif %}
+            </div>
+
+            {% if qr_image %}
+            <!-- البطاقة القابلة للطباعة -->
+            <div id="qr-print-area" class="bg-white text-slate-900 rounded-xl p-5 text-center">
+                <div class="font-bold text-lg mb-0.5">Shield — بطاقة الشحنة</div>
+                <div class="font-mono font-bold text-blue-700 mb-3" dir="ltr">{{ trip.trip_code }}</div>
+                <img src="data:image/png;base64,{{ qr_image }}" alt="QR Code للشحنة {{ trip.trip_code }}" class="max-h-48 mx-auto mb-3">
+                <div class="text-sm text-right space-y-1 border-t pt-3">
+                    <div><b>المحطة:</b> {{ trip.station.station_name }}</div>
+                    <div><b>الشاحنة:</b> {{ trip.truck.truck_id }} — {{ trip.truck.driver.driver_name }}</div>
+                    
+                </div>
+            </div>
+            <p class="text-xs text-slate-400 text-center mt-3 no-print">يمسحه المندوب الميداني للتحقق من الشحنة قبل التفريغ.</p>
+            {% else %}
+            <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 text-center text-slate-500 text-sm">
+                <i class="fa-solid fa-qrcode text-2xl opacity-40 mb-2 block"></i>
+                رمز الـ QR غير متاح (الشحنة انطلقت أو أُغلقت أو انتهت صلاحية الرمز).
+            </div>
+            {% endif %}
+        </section>
+
+        <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl no-print">
+            <div class="flex items-center gap-2 mb-5 border-b border-slate-700 pb-4">
+                <i class="fa-solid fa-flag-checkered text-emerald-500 text-lg"></i>
+                <h2 class="text-base font-bold">إدارة حالة الشحنة</h2>
+            </div>
+
+            {% if trip.status == 'pending' %}
+            <p class="text-xs text-slate-400 mb-4">الشحنة جاهزة. اضغط لإطلاقها ميدانياً وتحديث حالتها إلى «في الطريق».</p>
+            <form method="post" action="{% url 'trips:mark_trip_departed' trip.id %}"
+                  data-confirm-title="إطلاق الشحنة" data-confirm-icon="fa-paper-plane"
+                  data-confirm="تأكيد إطلاق الشحنة {{ trip.trip_code }} وتحديث حالتها إلى (في الطريق)؟">
+                {% csrf_token %}
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i> إطلاق الشحنة (بدء الانطلاق)
+                </button>
+            </form>
+            {% elif trip.status == 'in_transit' %}
+            <div class="bg-blue-500/10 border border-blue-500/30 text-blue-300 rounded-lg px-4 py-3 text-sm text-center">
+                <i class="fa-solid fa-truck-fast ml-1"></i> الشحنة منطلقة ميدانياً (في الطريق).
+            </div>
+            {% else %}
+            <div class="bg-slate-900 border border-slate-700 text-slate-400 rounded-lg px-4 py-3 text-sm text-center">
+                الحالة الحالية: <span class="font-bold text-slate-200">{{ trip.get_status_display }}</span>
+            </div>
+            {% endif %}
+        </section>
+
+        <a href="{% url 'trips:trip_list' %}" class="block text-center text-sm text-slate-400 hover:text-slate-200 transition no-print">
+            <i class="fa-solid fa-arrow-right-long ml-1"></i> العودة لسجل الشحنات
+        </a>
+    </div>
+</div>
+{% endblock %}
