@@ -188,7 +188,7 @@
 
                     <form method="post" action="{% url 'users:toggle_device_trust' d.id %}"
                           data-confirm-title="{% if d.is_trusted %}سحب ثقة الجهاز{% else %}اعتماد الجهاز{% endif %}"
-                          data-confirm="{% if d.is_trusted %}سحب الثقة من هذا الجهاز؟ لن يستطيع التفريغ منه.{% else %}اعتماد هذا الجهاز للتفريغ؟{% endif %}"
+                          data-confirm="{% if d.is_trusted %}سحب الثقة من هذا الجهاز؟ .{% else %}اعتماد هذا الجهاز؟{% endif %}"
                           data-confirm-icon="fa-shield-halved">
                         {% csrf_token %}
                         {% if d.is_trusted %}

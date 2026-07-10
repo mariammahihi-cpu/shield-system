@@ -172,12 +172,15 @@ class TruckForm(forms.ModelForm):
         return value
 
 class DischargeForm(forms.ModelForm):
-    """
-    نموذج تسجيل القراءات الفيزيائية عند التفريغ (متطلب التوثيق الميداني):
-    الكثافة النوعية المسجلة، درجة الحرارة، والحجم الفعلي المقاس في المحطة.
-    مع حقلي إحداثيات الـ GPS (مخفيان). الحجم المصحح عند 15°م يُحتسب تلقائياً
-    في الخادم داخل DischargeRecord.save() ولا يُعرض للمندوب.
-    """
+    # حقل غير مرتبط بالموديل: الأرقام التي شاهدها المندوب فعلياً على الصهريج
+    observed_seal_numbers = forms.CharField(
+        required=True,
+        label='أرقام الأختام المشاهَدة على الصهريج',
+        widget=forms.TextInput(attrs={
+            'class': 'sh-input',
+            'placeholder': 'افصل بفاصلة، مثال: SEAL-4471، SEAL-4472',
+        }),
+    )
 
     class Meta:
         model = DischargeRecord
@@ -187,6 +190,7 @@ class DischargeForm(forms.ModelForm):
             'discharge_volume_ambient',
             'scan_latitude',
             'scan_longitude',
+            'seal_notes',                     # ← أضف (اختياري للملاحظات)
         ]
         widgets = {
             'discharge_density': forms.NumberInput(attrs={
@@ -200,12 +204,15 @@ class DischargeForm(forms.ModelForm):
             }),
             'scan_latitude': forms.HiddenInput(),
             'scan_longitude': forms.HiddenInput(),
+            'seal_notes': forms.Textarea(attrs={     # ← أضف
+                'rows': 2, 'class': 'sh-input', 'placeholder': 'ملاحظات إضافية (اختياري)...',
+            }),
         }
         labels = {
             'discharge_density': 'الكثافة النوعية المسجلة',
             'discharge_temperature': 'درجة الحرارة عند التفريغ (°C)',
             'discharge_volume_ambient': 'الحجم الفعلي المقاس في المحطة (لتر)',
-            
+            'seal_notes': 'ملاحظات الأختام (اختياري)',   # ← أضف
         }
 
     def __init__(self, *args, trip=None, **kwargs):

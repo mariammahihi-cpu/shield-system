@@ -30,8 +30,15 @@ from .utils import generate_qr_code_base64
 from .forms import DischargeForm, FaultReportForm,DriverForm,TruckForm
 from geopy.distance import geodesic
 from django.urls import reverse
+import re
 
-
+def _normalize_seals(raw):
+    """يحوّل نص أرقام الأختام إلى مجموعة موحّدة.
+    يتجاهل: الترتيب، المسافات الزائدة، حالة الأحرف، ونوع الفاصل (، , ; مسافة سطر)."""
+    if not raw:
+        return set()
+    parts = re.split(r'[,\u060C;\n\r\t ]+', raw.strip())
+    return {p.strip().upper() for p in parts if p.strip()}
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -166,13 +173,18 @@ def create_trip(request):
                 messages.error(request, 'يرجى ملء جميع الحقول المطلوبة.')
                 return redirect('trips:create_trip')
 
-            if shipped_volume <= 0 or shipped_temp < -50 or shipped_temp > 60 or shipped_density <= 0:
-                messages.error(request, 'البيانات الفيزيائية المدخلة غير منطقية.')
+            if shipped_volume <= 0 or shipped_temp < -50 or shipped_temp > 60 \
+                or shipped_density < Decimal('0.653') or shipped_density > Decimal('0.770'):
+                messages.error(request, 'البيانات الفيزيائية غير منطقية للبنزين (الكثافة يجب أن تكون بين 0.653 و 0.770).')
                 return redirect('trips:create_trip')
 
             agent = get_object_or_404(User, id=agent_id, role='agent')
             truck = get_object_or_404(Truck, id=truck_id)
             station = get_object_or_404(Station, id=station_id)
+            # ⭐ منع إسناد محطة غير مرتبطة بالمندوب (حماية من تجاوز فلترة الواجهة)
+            if not station.agents.filter(id=agent.id).exists():
+                messages.error(request, 'المحطة المختارة غير مرتبطة بهذا المندوب. اختر محطة من محطاته المعينة.')
+                return redirect('trips:create_trip')
 
             # ⭐ (1) منع إسناد سائق لرحلة ثانية قبل تفريغ رحلته الأولى
             if truck.driver.has_active_trip():
@@ -223,7 +235,7 @@ def create_trip(request):
     context = {
         'agents': User.objects.filter(role='agent', is_active=True),
         'trucks': available_trucks,
-        'stations': Station.objects.filter(is_active=True, is_banned=False),
+        'stations': Station.objects.filter(is_active=True, is_banned=False).prefetch_related('agents'),
         'base_template': get_base_template_for(request.user),
     }
     return render(request, 'trips/create_trip.html', context)
@@ -366,106 +378,7 @@ def qr_redirect(request, qr_token):
 # 📥 DISCHARGE WORKFLOW - معالجة عمليات التفريغ والجيوفينسنج
 # ============================================================================
 
-@login_required
-@require_http_methods(["POST"])
-@role_required('agent')
-@transaction.atomic
-def submit_discharge(request, trip_id):
-    """استقبال بيانات التفريغ الميداني وفحص التلاعب والمطابقة الحجمية والجغرافية."""
-    trip = get_object_or_404(Trip.objects.select_related('station', 'warehouse'), pk=trip_id)
-    
-    if trip.agent != request.user:
-        messages.error(request, 'غير مصرح لك بتفريغ شحنة مستلمة من قبل مندوب آخر.')
-        return redirect('trips:trip_detail', trip_id=trip.id)
-    
-    try:
-        _verify_qr_scanned(trip, request)
-    except PermissionDenied as e:
-        messages.error(request, str(e))
-        return redirect('trips:trip_detail', trip_id=trip.id)
-    
-    if hasattr(trip, 'discharge_record') and trip.discharge_record:
-        messages.error(request, 'تم إغلاق وتفريغ هذه الشحنة مسبقاً.')
-        return redirect('trips:trip_detail', trip_id=trip.id)
 
-    if trip.status in ['completed', 'suspect', 'canceled']:
-        messages.error(request, 'حالة الرحلة الحالية لا تسمح بالتفريغ.')
-        return redirect('trips:trip_detail', trip_id=trip.id)
-    
-    if not is_trusted_device(request):
-        logger.critical(f'🚫 محاولة تفريغ من جهاز غير موثوق: {request.user.username}')
-        messages.error(request, '🔒 لا يمكن التفريغ من جهاز غير مربوط بحسابك. استخدم جهازك الميداني المعتمد.')
-        return redirect('trips:trip_detail', trip_id=trip.id)
-
-    # 1. جلب الإحداثيات
-    raw_lat = request.POST.get('scan_latitude', '').strip()
-    raw_lon = request.POST.get('scan_longitude', '').strip()
-
-    if not raw_lat or not raw_lon or raw_lat in ('0', '0.0') or raw_lon in ('0', '0.0'):
-        messages.error(request, 'خطأ أمني: لم نتمكن من تحديد موقعك الحالي. يرجى تفعيل إذن الوصول للـ GPS.')
-        return redirect('trips:trip_detail', trip_id=trip.id)
-
-    try:
-        ambient_vol = Decimal(request.POST.get('discharge_volume_ambient', 0))
-        temp = Decimal(request.POST.get('discharge_temperature', 0))
-        density = Decimal(request.POST.get('discharge_density', 0))
-        
-        if ambient_vol <= 0 or temp < -50 or temp > 60 or density <= 0:
-            messages.error(request, 'البيانات الفيزيائية المقاسة غير منطقية.')
-            return redirect('trips:trip_detail', trip_id=trip.id)
-        
-        lat = Decimal(raw_lat)
-        lon = Decimal(raw_lon)
-        seal_passed = request.POST.get('seal_check_passed') == 'on'
-        seal_notes = request.POST.get('seal_notes', '').strip()
-        notes = request.POST.get('notes', '').strip()
-
-        # 2. الحسابات الجغرافية المرنة
-        distance = _calculate_haversine(lat, lon, trip.station.latitude, trip.station.longitude)
-        
-        # جلب مسافة المحطة من قاعدة البيانات (مع قيمة افتراضية 50 إذا كانت فارغة)
-        station_radius = getattr(trip.station, 'geofence_radius', 50) or 50
-        gps_tolerance = 50 
-        
-        if distance <= station_radius:
-            geo_status = 'green'
-        elif distance <= (station_radius + gps_tolerance):
-            geo_status = 'yellow'
-        else:
-            geo_status = 'red'
-
-        record = DischargeRecord(
-            trip=trip,
-            agent=request.user,
-            discharge_volume_ambient=ambient_vol,
-            discharge_temperature=temp,
-            discharge_density=density,
-            scan_latitude=lat,
-            scan_longitude=lon,
-            scan_distance_m=Decimal(str(round(distance, 2))),
-            geofence_status=geo_status,
-            seal_check_passed=seal_passed,
-            seal_notes=seal_notes,
-            notes=notes
-        )
-        record.save()
-
-        # 3. المنطق المشروط للحالة (is_suspect يتم تحديده بناءً على geo_status)
-        if record.geofence_status == 'red':
-            trip.status = 'suspect'
-            logger.critical(f'🚨 شحنة مشبوهة (خرق جغرافي): {trip.trip_code} | المسافة: {round(distance)}م')
-            messages.warning(request, '🚨 تم تسجيل التفريغ، لكن النظام رصد خرقاً جغرافياً للنطاق الآمن.')
-        else:
-            trip.status = 'completed'
-            messages.success(request, f'✅ تم تأكيد استلام وتفريغ الشحنة {trip.trip_code} بنجاح.')
-        
-        trip.save()
-        return redirect('trips:trip_detail', trip_id=trip.id)
-
-    except (ValueError, InvalidOperation) as e:
-        logger.error(f'❌ خطأ في معالجة الإدخال للرحلة {trip.trip_code}: {str(e)}')
-        messages.error(request, 'فشل الحفظ. يرجى التحقق من صحة صياغة الأرقام.')
-        return redirect('trips:trip_detail', trip_id=trip.id)
 @login_required
 @role_required('dispatcher', 'agent', 'manager', 'auditor', 'admin')
 def discharge_records(request):
@@ -886,7 +799,7 @@ def agent_fault_list(request):
 def submit_discharge(request, trip_id):
     """
     التوثيق الميداني والمطابقة الرقمية والجغرافية لتفريغ شحنة بنزين.
-    الترتيب: أمان الجهاز → مطابقة QR → السياج الجغرافي → تسجيل وإغلاق الرحلة.
+    الترتيب: أمان الجهاز → مطابقة QR → السياج الجغرافي → مطابقة الأختام → تسجيل وإغلاق الرحلة.
     """
     if not _require_agent(request):
         messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة.')
@@ -963,18 +876,35 @@ def submit_discharge(request, trip_id):
     record.agent = request.user
     record.scan_distance_m = round(distance_m, 2)
     record.geofence_status = 'green'
+
+    # 🔒 مطابقة أرقام الأختام (غير حسّاسة للترتيب) — تُحسب في الخادم لا يقرّرها المندوب
+    recorded_seals = _normalize_seals(trip.seal_numbers)
+    observed_input = form.cleaned_data.get('observed_seal_numbers', '')
+    observed_seals = _normalize_seals(observed_input)
+    record.seal_check_passed = bool(recorded_seals) and (observed_seals == recorded_seals)
+    if not record.seal_check_passed:
+        mismatch = f'⚠️ عدم تطابق الأختام | المسجّل: {trip.seal_numbers} | المشاهَد: {observed_input}'
+        record.seal_notes = f'{record.seal_notes} | {mismatch}' if record.seal_notes else mismatch
+
     record.save()
 
     if record.is_suspect:
         trip.status = 'suspect'
+        # سبب الاشتباه: عجز حجمي و/أو عدم تطابق الأختام
+        reasons = []
+        if not record.seal_check_passed:
+            reasons.append('عدم تطابق أرقام الأختام')
+        if record.variance_liters and abs(record.variance_liters) > 0:
+            reasons.append(f'عجز حجمي {record.variance_liters} لتر ({record.variance_percent}%)')
+        reason_text = ' + '.join(reasons) if reasons else 'مخالفة في القراءات'
         Alert.objects.create(
             trip=trip, alert_type='volume_variance', severity='critical',
-            description=f'عجز حجمي غير طبيعي قدره {record.variance_liters} لتر ({record.variance_percent}%) عند تفريغ الرحلة {trip.trip_code}.',
+            description=f'شحنة مشبوهة عند تفريغ الرحلة {trip.trip_code}: {reason_text}.',
         )
-        messages.warning(request, f'تم حفظ السجل، لكن رُصد عجز حجمي {record.variance_liters} لتر يتجاوز الحد المسموح. صُنّفت الرحلة كمشبوهة وأُخطر المراقبون.')
+        messages.warning(request, f'تم حفظ السجل، لكن رُصدت مخالفة ({reason_text}). صُنّفت الرحلة كمشبوهة وأُخطر المراقبون.')
     else:
         trip.status = 'completed'
-        messages.success(request, 'تم تسجيل التفريغ والتحقق من المطابقة الرقمية والجغرافية بنجاح. أُغلقت الرحلة كمكتملة.')
+        messages.success(request, 'تم تسجيل التفريغ والتحقق من المطابقة الرقمية والجغرافية والأختام بنجاح. أُغلقت الرحلة كمكتملة.')
 
     trip.save(update_fields=['status', 'updated_at'])
     AuditLog.objects.create(
@@ -983,6 +913,7 @@ def submit_discharge(request, trip_id):
         new_value=f'الحالة النهائية: {trip.get_status_display()}',
     )
     return redirect('trips:discharge_log')
+
 
 
 @login_required
@@ -1151,3 +1082,4 @@ def trip_qr(request, trip_id):
 
     qr_url = request.build_absolute_uri(reverse('trips:qr_redirect', args=[trip.qr_token]))
     return render(request, 'trips/trip_qr.html', {'trip': trip, 'qr_url': qr_url})
+

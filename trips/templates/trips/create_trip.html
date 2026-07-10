@@ -47,8 +47,9 @@
                     <label for="station_id" class="text-sm font-medium text-slate-300">المحطة المستهدفة</label>
                     <select name="station_id" id="station_id" required class="sh-input">
                         <option value="" disabled selected>-- اختر محطة التفريغ --</option>
-                        {% for station in stations %}
-                        <option value="{{ station.id }}">{{ station.customer_number }} - {{ station.station_name }} ({{ station.city }})</option>
+                         {% for station in stations %}
+                        <option value="{{ station.id }}" data-agents="{% for a in station.agents.all %}{{ a.id }}{% if not forloop.last %},{% endif %}{% endfor %}">{{ station.customer_number }} 
+                        - {{ station.station_name }} ({{ station.city }})</option>
                         {% empty %}
                         <option value="" disabled>لا توجد محطات نشطة</option>
                         {% endfor %}
@@ -93,4 +94,43 @@
         </form>
     </section>
 </div>
+
+<script>
+(function () {
+    const agentSel   = document.getElementById('agent_id');
+    const stationSel = document.getElementById('station_id');
+    if (!agentSel || !stationSel) return;
+
+    const options = Array.from(stationSel.options);
+
+    function filterStations() {
+        const agentId = agentSel.value;
+        let visibleCount = 0;
+
+        options.forEach(function (opt) {
+            if (!opt.value) return; // تجاهل خيار "-- اختر --"
+            const agents = (opt.dataset.agents || '').split(',').filter(Boolean);
+            const match  = agentId && agents.indexOf(agentId) !== -1;
+            opt.hidden   = !match;
+            opt.disabled = !match;
+            if (match) visibleCount++;
+        });
+
+        // لو الاختيار الحالي صار مخفياً، صفّره للعودة لخيار "-- اختر --"
+        const current = stationSel.selectedOptions[0];
+        if (current && current.hidden) stationSel.value = '';
+
+        // خيار "-- اختر --" النصّي حسب الحالة
+        const placeholder = stationSel.options[0];
+        if (placeholder) {
+            if (!agentId)            placeholder.textContent = '-- اختر المندوب أولاً --';
+            else if (visibleCount===0) placeholder.textContent = '-- لا محطات مرتبطة بهذا المندوب --';
+            else                     placeholder.textContent = '-- اختر محطة التفريغ --';
+        }
+    }
+
+    agentSel.addEventListener('change', filterStations);
+    filterStations(); // الحالة الابتدائية عند فتح الصفحة
+})();
+</script>
 {% endblock %}

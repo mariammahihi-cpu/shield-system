@@ -40,7 +40,6 @@
                 <div class="text-slate-400 text-xs mb-1.5">الشاحنة / السائق</div>
                 <div class="font-bold text-slate-200">{{ trip.truck.truck_id }} — {{ trip.truck.driver.driver_name }}</div>
             </div>
-           
             <div>
                 <div class="text-slate-400 text-xs mb-1.5">حالة الرحلة الحالية</div>
                 <div class="font-bold text-blue-400">{{ trip.get_status_display }}</div>
@@ -139,6 +138,20 @@
                     <label for="{{ form.discharge_volume_ambient.id_for_label }}" class="text-sm font-medium text-slate-300">{{ form.discharge_volume_ambient.label }}</label>
                     {{ form.discharge_volume_ambient }}
                     {% for error in form.discharge_volume_ambient.errors %}<span class="text-xs text-red-400">{{ error }}</span>{% endfor %}
+                </div>
+            </div>
+
+            <!-- 🔒 مطابقة أرقام الأختام -->
+            <div class="mt-6 pt-5 border-t border-slate-700 flex flex-col gap-4">
+                <div class="flex flex-col gap-2">
+                    <label for="{{ form.observed_seal_numbers.id_for_label }}" class="text-sm font-medium text-slate-300">{{ form.observed_seal_numbers.label }}</label>
+                    {{ form.observed_seal_numbers }}
+                    {% for error in form.observed_seal_numbers.errors %}<span class="text-xs text-red-400">{{ error }}</span>{% endfor %}
+                    <span class="text-xs text-slate-500">أدخل الأرقام كما هي على الصهريج، مفصولة بفاصلة. الترتيب غير مهم.</span>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label for="{{ form.seal_notes.id_for_label }}" class="text-sm text-slate-400">{{ form.seal_notes.label }}</label>
+                    {{ form.seal_notes }}
                 </div>
             </div>
 

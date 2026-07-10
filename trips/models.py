@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from .astm_calculations import compute_standard_volume
 
 
 def generate_trip_code():
@@ -158,19 +159,21 @@ class Trip(models.Model):
         return f"رحلة {self.trip_code} → {self.station.station_name}"
 
     def save(self, *args, **kwargs):
-        self.fuel_type = 'petrol'
-        if not self.trip_code:
-            self.trip_code = generate_trip_code()
-        if not self.qr_expires_at:
-            self.qr_expires_at = timezone.now() + timezone.timedelta(hours=48)
-        
-        # حساب الحجم القياسي عند 15°C
-        thermal_coefficient = Decimal('0.0009')
-        temp_diff = self.shipped_temperature - Decimal('15')
-        correction = Decimal('1') - (temp_diff * thermal_coefficient)
-        self.shipped_volume_15c = self.shipped_volume_ambient * correction
-        
-        super().save(*args, **kwargs)
+            self.fuel_type = 'petrol'
+            if not self.trip_code:
+              self.trip_code = generate_trip_code()
+            if not self.qr_expires_at:
+              self.qr_expires_at = timezone.now() + timezone.timedelta(hours=48)
+
+        # حساب الحجم القياسي عند 15°C وفق معيار ASTM D1250
+            self.shipped_volume_15c = Decimal(str(compute_standard_volume(
+              product_type=self.fuel_type,                      # ✅ self.fuel_type مش self.trip.fuel_type
+              observed_volume=float(self.shipped_volume_ambient),
+              observed_temp=float(self.shipped_temperature),
+              density_15c=float(self.shipped_density),
+         )))
+
+            super().save(*args, **kwargs)
 
     def is_qr_valid(self):
         """التحقق من صلاحية QR code - لم تنته صلاحيته؟"""
@@ -248,11 +251,13 @@ class DischargeRecord(models.Model):
         return f"تفريغ رحلة {self.trip.trip_code}"
 
     def save(self, *args, **kwargs):
-        # 1️⃣ حساب الحجم القياسي عند 15°C (معيار دولي)
-        thermal_coefficient = Decimal('0.0009')
-        temp_diff = self.discharge_temperature - Decimal('15')
-        correction = Decimal('1') - (temp_diff * thermal_coefficient)
-        self.discharge_volume_15c = self.discharge_volume_ambient * correction
+                # حساب الحجم القياسي عند 15°C وفق معيار ASTM D1250
+        self.discharge_volume_15c = Decimal(str(compute_standard_volume(
+            product_type=self.trip.fuel_type,
+            observed_volume=float(self.discharge_volume_ambient),
+            observed_temp=float(self.discharge_temperature),
+            density_15c=float(self.discharge_density),
+        )))
 
         # 2️⃣ حساب فارق العجز (الفقد الفعلي)
         shipped = self.trip.shipped_volume_15c
