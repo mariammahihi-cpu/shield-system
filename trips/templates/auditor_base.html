@@ -49,7 +49,10 @@
             <a href="{% url 'faults:list' %}"
                class="flex items-center gap-3 px-4 py-2.5 rounded-lg transition
                {% if request.resolver_match.namespace == 'faults' %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}text-slate-300 hover:bg-slate-700{% endif %}">
-                <i class="fas fa-screwdriver-wrench w-5"></i> البلاغات التقنية
+               <i class="fas fa-screwdriver-wrench w-5"></i> البلاغات التقنية
+               {% if open_faults_count %}
+               <span class="ms-auto bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center">{{ open_faults_count }}</span>
+               {% endif %}
             </a>
             
         </nav>

@@ -1,0 +1,167 @@
+{% extends base_template|default:'admin_base.html' %}
+
+{% block title %}تفاصيل البلاغ{% endblock %}
+
+{% block page_title %}
+    <i class="fa-solid fa-screwdriver-wrench text-amber-400"></i>
+    تفاصيل البلاغ التقني
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-5">
+
+    <!-- رجوع -->
+    <a href="{% url 'faults:list' %}" class="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-arrow-right"></i> العودة لسجل البلاغات
+    </a>
+
+    <!-- البطاقة الرئيسية -->
+    <section class="bg-slate-800 border border-slate-700 rounded-2xl shadow-xl overflow-hidden
+        {% if fault.is_critical and fault.status != 'closed' %}ring-1 ring-red-500/40{% endif %}">
+
+        <!-- الترويسة -->
+        <div class="px-6 py-5 border-b border-slate-700 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-xl font-bold text-slate-100 flex items-center gap-2 flex-wrap">
+                    {{ fault.get_fault_type_display }}
+                    {% if fault.is_critical %}
+                    <span class="text-xs px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/30">
+                        <i class="fa-solid fa-circle-exclamation"></i> يمنع التشغيل
+                    </span>
+                    {% endif %}
+                </h2>
+                <p class="text-xs text-slate-500 mt-1"><i class="fa-regular fa-clock"></i> أُبلغ في {{ fault.created_at|date:"Y-m-d H:i" }}</p>
+            </div>
+            <span class="inline-block whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium
+                {% if fault.status == 'open' %}bg-yellow-500/10 text-yellow-400
+                {% elif fault.status == 'fixing' %}bg-blue-500/10 text-blue-400
+                {% else %}bg-emerald-500/10 text-emerald-400{% endif %}">
+                {{ fault.get_status_display }}
+            </span>
+        </div>
+
+        <!-- التفاصيل -->
+        <div class="p-6 grid md:grid-cols-2 gap-x-8 gap-y-5 text-sm">
+            <div>
+                <div class="text-xs text-slate-500 mb-1">مبلّغ البلاغ</div>
+                <div class="text-slate-200 flex items-center gap-2">
+                    <i class="fa-regular fa-user text-slate-500"></i>
+                    {{ fault.reported_by.full_name|default:fault.reported_by.username }}
+                </div>
+            </div>
+            <div>
+                <div class="text-xs text-slate-500 mb-1">الشاحنة</div>
+                <div class="text-slate-200">{{ fault.truck.truck_id|default:"—" }}</div>
+            </div>
+            <div>
+                <div class="text-xs text-slate-500 mb-1">الرحلة المرتبطة</div>
+                <div class="text-slate-200 font-mono text-blue-400">{{ fault.trip.trip_code|default:"—" }}</div>
+            </div>
+            <div>
+                <div class="text-xs text-slate-500 mb-1">المحطة المرتبطة</div>
+                <div class="text-slate-200">{{ fault.station.station_name|default:"—" }}</div>
+            </div>
+
+            <div class="md:col-span-2">
+                <div class="text-xs text-slate-500 mb-1">وصف العطل</div>
+                <p class="text-slate-200 leading-relaxed bg-slate-900 border border-slate-700 rounded-lg p-4 whitespace-pre-wrap">{{ fault.description }}</p>
+            </div>
+
+            {% if fault.action_taken %}
+            <div class="md:col-span-2">
+                <div class="text-xs text-slate-500 mb-1">الإجراء المتخذ</div>
+                <p class="text-emerald-200 leading-relaxed bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-4 whitespace-pre-wrap">
+                    <i class="fa-solid fa-wrench text-emerald-400"></i> {{ fault.action_taken }}
+                </p>
+            </div>
+            {% endif %}
+
+            {% if fault.resolved_at %}
+            <div>
+                <div class="text-xs text-slate-500 mb-1">تاريخ الإغلاق</div>
+                <div class="text-slate-200"><i class="fa-regular fa-circle-check text-emerald-400"></i> {{ fault.resolved_at|date:"Y-m-d H:i" }}</div>
+            </div>
+            {% endif %}
+
+            {% if fault.photo %}
+            <div class="md:col-span-2">
+                <div class="text-xs text-slate-500 mb-2">صورة العطل</div>
+                <a href="{{ fault.photo.url }}" target="_blank">
+                    <img src="{{ fault.photo.url }}" alt="صورة العطل"
+                         class="max-h-72 rounded-xl border border-slate-700 hover:opacity-90 transition">
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- شريط الإجراءات -->
+        {% if fault.status != 'closed' %}
+        <div class="px-6 py-4 border-t border-slate-700 bg-slate-800/60 flex flex-wrap items-center gap-3">
+            {% if fault.status == 'open' %}
+            <form method="post" action="{% url 'faults:resolve' fault.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="start">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button class="px-4 py-2.5 rounded-lg text-sm font-medium bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 transition">
+                    <i class="fa-solid fa-play"></i> بدء المعالجة
+                </button>
+            </form>
+            {% endif %}
+            <button type="button"
+                    onclick="openResolveModal({{ fault.id }}, '{{ fault.get_fault_type_display|escapejs }}')"
+                    class="px-4 py-2.5 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-500 transition">
+                <i class="fa-solid fa-check"></i> إغلاق البلاغ
+            </button>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- 🔧 مودال إغلاق البلاغ -->
+<div id="resolveModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+            <h3 class="font-bold text-slate-100"><i class="fa-solid fa-clipboard-check text-emerald-400"></i> إغلاق البلاغ</h3>
+            <button type="button" onclick="closeResolveModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form method="post" id="resolveForm">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="close">
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <div class="p-6 space-y-4">
+                <p class="text-sm text-slate-400">البلاغ: <span id="resolveFaultLabel" class="text-slate-200 font-medium"></span></p>
+                <div>
+                    <label class="block text-sm mb-1 text-slate-300">ملاحظة الإصلاح <span class="text-red-400">*</span></label>
+                    <textarea name="action_taken" rows="4" required class="sh-input" placeholder="اكتب تفاصيل الإجراء المتخذ لإصلاح العطل..."></textarea>
+                </div>
+            </div>
+            <div class="flex gap-3 px-6 py-4 border-t border-slate-700">
+                <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg py-2.5 text-sm font-medium transition">
+                    <i class="fa-solid fa-check"></i> تأكيد الإغلاق
+                </button>
+                <button type="button" onclick="closeResolveModal()" class="px-5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg py-2.5 text-sm transition">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    const resolveModal = document.getElementById('resolveModal');
+    const resolveForm  = document.getElementById('resolveForm');
+    const resolveUrlTpl = "{% url 'faults:resolve' 0 %}";
+
+    function openResolveModal(id, label) {
+        resolveForm.action = resolveUrlTpl.replace('/0/', '/' + id + '/');
+        document.getElementById('resolveFaultLabel').textContent = label;
+        resolveModal.classList.remove('hidden');
+        resolveModal.classList.add('flex');
+    }
+    function closeResolveModal() {
+        resolveModal.classList.add('hidden');
+        resolveModal.classList.remove('flex');
+        resolveForm.reset();
+    }
+    resolveModal.addEventListener('click', e => { if (e.target === resolveModal) closeResolveModal(); });
+</script>
+{% endblock %}

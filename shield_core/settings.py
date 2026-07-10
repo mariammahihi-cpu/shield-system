@@ -74,6 +74,7 @@ TEMPLATES = [
                 'alerts.context_processors.notifications_badge',
                 'users.context_processors.admin_pending_devices',
                 'users.context_processors.admin_audit_badge',
+                'faults.context_processors.faults_badge',
             ],
         },
     },
