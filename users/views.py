@@ -108,13 +108,17 @@ def login_view(request):
             browser_fingerprint=browser_fp,
             defaults={
                 'user_agent': user_agent,
-                'is_trusted': False
+                # جهاز مدير النظام يُعتمد تلقائياً (هو من يعتمد باقي الأجهزة، فلا يُقفل على نفسه)
+                'is_trusted': (user.role == 'admin')
             }
         )
 
         if not created:
             browser_session.user_agent = user_agent
-            browser_session.save(update_fields=['user_agent', 'last_used_at'])
+            # اعتماد جهاز المدير تلقائياً حتى لو كانت بطاقته قديمة غير موثوقة
+            if user.role == 'admin' and not browser_session.is_trusted:
+                browser_session.is_trusted = True
+            browser_session.save(update_fields=['user_agent', 'last_used_at', 'is_trusted'])
 
         # 5️⃣ إنشاء الجلسة في بيئة Django
         login(request, user)

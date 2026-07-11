@@ -12,6 +12,7 @@ urlpatterns = [
     path('auditor/', views.auditor_dashboard, name='auditor'),
     path('manager/', views.manager_dashboard, name='manager_dashboard'),
     path('manager/stations/', views.station_stats, name='station_stats'),
+    path('manager/warehouses/', views.warehouse_stats, name='warehouse_stats'),
     path('manager/critical-alerts/',  views.critical_alerts, name='critical_alerts'),
     path('manager/critical-alerts/<int:pk>/decide/', views.critical_alert_action, name='critical_alert_action'),
 ]

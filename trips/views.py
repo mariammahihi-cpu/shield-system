@@ -31,6 +31,7 @@ from .forms import DischargeForm, FaultReportForm,DriverForm,TruckForm
 from geopy.distance import geodesic
 from django.urls import reverse
 import re
+from django.db import IntegrityError
 
 def _normalize_seals(raw):
     """يحوّل نص أرقام الأختام إلى مجموعة موحّدة.
@@ -186,11 +187,12 @@ def create_trip(request):
                 messages.error(request, 'المحطة المختارة غير مرتبطة بهذا المندوب. اختر محطة من محطاته المعينة.')
                 return redirect('trips:create_trip')
 
-            # ⭐ (1) منع إسناد سائق لرحلة ثانية قبل تفريغ رحلته الأولى
-            if truck.driver.has_active_trip():
-                messages.error(request, f'السائق {truck.driver.driver_name} لديه رحلة نشطة لم تُفرَّغ بعد. لا يمكن إسناده لرحلة ثانية.')
+            # ⭐ (1) قفل صف السائق حتى نهاية المعاملة — يسلسل الطلبات المتزامنة (ضد Race Condition)
+            driver = Driver.objects.select_for_update().get(pk=truck.driver_id)
+            if driver.has_active_trip():
+                messages.error(request, f'السائق {driver.driver_name} لديه رحلة نشطة لم تُفرَّغ بعد. لا يمكن إسناده لرحلة ثانية.')
                 return redirect('trips:create_trip')
-
+            
             # جلب مستودع الموظف الحالي
             warehouse = request.user.assigned_warehouses.first()
             if not warehouse:
@@ -210,7 +212,11 @@ def create_trip(request):
                 notes=notes,
                 status='pending'
             )
-            trip.save()
+            try:
+                trip.save()
+            except IntegrityError:
+                messages.error(request, 'تعذّر الإنشاء: هذه الشاحنة مُسنَدة لرحلة نشطة بالفعل (طلب متزامن).')
+                return redirect('trips:create_trip')
 
             logger.info(f'✅ {request.user.username} أنشأ الشحنة: {trip.trip_code}')
             messages.success(request, f'تم إنشاء الرحلة {trip.trip_code} وتوليد الـ QR بنجاح.')
@@ -564,6 +570,11 @@ def trip_reports(request):
 def trip_report_detail(request, trip_id):
     """إنتاج تقرير تدقيق هندسي مفصل وشامل لرحلة توريد فردية."""
     trip = get_object_or_404(Trip.objects.prefetch_related('discharge_record'), pk=trip_id)
+
+    # 🔒 منع IDOR: موظف المستودع يرى تقارير رحلاته فقط (المدير/المراقب/الأدمن يرون الكل)
+    if request.user.role == 'dispatcher' and trip.dispatcher != request.user:
+        raise PermissionDenied()
+
     return render(request, 'trips/trip_report_detail.html', {
         'trip': trip,
         'discharge_record': getattr(trip, 'discharge_record', None),
@@ -794,6 +805,17 @@ def agent_fault_list(request):
     )
     return render(request, 'trips/agent_fault_list.html', {'faults': faults})
 
+@login_required
+def agent_fault_detail(request, pk):
+    """تفاصيل بلاغ رفعه المندوب الحالي — عرض كامل قابل للطباعة."""
+    if not _require_agent(request):
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة.')
+        return redirect('dashboard:home')
+    fault = get_object_or_404(
+        MechanicalFault.objects.select_related('trip', 'trip__station', 'station', 'truck'),
+        pk=pk, reported_by=request.user,   # 🔒 يمنع IDOR: بلاغاته هو فقط
+    )
+    return render(request, 'trips/agent_fault_detail.html', {'fault': fault})
 
 @login_required
 def submit_discharge(request, trip_id):

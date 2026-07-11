@@ -1,22 +1,17 @@
 from .models import Alert
 
 def notifications_badge(request):
-    """عدد الإشعارات غير المقروءة — يظهر في كل القوالب."""
+    """عدد الإشعارات غير المقروءة — لأدوار الرقابة فقط (المراقب/المدير/الأدمن)."""
     if not request.user.is_authenticated:
         return {}
 
-    user = request.user
-    role = getattr(user, 'role', None)
+    role = getattr(request.user, 'role', None)
+    # الإنذارات أداة رقابة → لا تُعرض للمندوب/موظف المستودع (المُراقَبين)
+    if role not in ('auditor', 'manager', 'admin'):
+        return {}
+
     qs = Alert.objects.all()
-
-    if role == 'agent':
-        qs = qs.filter(trip__agent=user)
-    elif role == 'dispatcher':
-        qs = qs.filter(trip__dispatcher=user)
-    elif role not in ('manager', 'admin', 'auditor'):
-        return {'unread_notifications': 0}
-
-    if user.notifications_seen_at:
-        qs = qs.filter(created_at__gt=user.notifications_seen_at)
+    if request.user.notifications_seen_at:
+        qs = qs.filter(created_at__gt=request.user.notifications_seen_at)
 
     return {'unread_notifications': qs.count()}

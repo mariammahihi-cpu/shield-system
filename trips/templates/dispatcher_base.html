@@ -75,21 +75,21 @@
             <div class="flex items-center gap-4">
                 {% block header_actions %}{% endblock %}
 
-                <!-- 🔔 جرس الإشعارات -->
-                <a href="{% url 'alerts:notifications' %}" class="relative text-slate-300 hover:text-white transition" title="الإشعارات">
-                    <i class="fas fa-bell text-lg"></i>
-                    {% if unread_notifications %}
-                    <span class="absolute -top-2 -left-2 bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center">
-                        {{ unread_notifications }}
-                    </span>
-                    {% endif %}
-                </a>
+                {% if request.user.role in 'auditor manager admin' %}
+  <!-- ... كود جرس الإشعارات <a href="{% url 'alerts:notifications' %}"> ... </a> ... -->
+               {% endif %}
 
                 <!-- بطاقة المستخدم -->
                 <div class="flex items-center gap-3 pr-4 border-r border-slate-700">
                     <div class="text-left leading-tight hidden sm:block">
                         <div class="text-sm font-semibold text-white">{{ request.user.full_name|default:request.user.username }}</div>
-                        <div class="text-xs text-slate-400">{{ request.user.get_role_display }}</div>
+                            <div class="text-xs text-slate-400">
+                            {{ request.user.get_role_display }}
+                            {% with wh=request.user.assigned_warehouses.first %}
+                             {% if wh %}<span class="text-slate-500">·</span> 
+                            <span class="text-slate-300">{{ wh.warehouse_name }}</span>{% endif %}
+                            {% endwith %}
+                            </div>
                     </div>
                     <div class="w-9 h-9 rounded-full bg-blue-600/20 border border-blue-500/30 text-blue-300 flex items-center justify-center font-bold">
                         {{ request.user.full_name|default:request.user.username|first|upper }}

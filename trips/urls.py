@@ -84,6 +84,7 @@ urlpatterns = [
     path('agent/', views.agent_trip_list, name='agent_trip_list'),
     path('agent/discharge-log/', views.agent_discharge_log, name='discharge_log'),
     path('agent/faults/', views.agent_fault_list, name='agent_fault_list'),
+    path('agent/faults/<int:pk>/', views.agent_fault_detail, name='agent_fault_detail'),
     path('agent/trip/<int:trip_id>/discharge/', views.submit_discharge, name='submit_discharge'),
     path('agent/trip/<int:trip_id>/report-fault/', views.report_fault, name='report_fault'),
     path('drivers/', views.driver_list, name='driver_list'),

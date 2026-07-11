@@ -182,6 +182,46 @@ def station_stats(request):
     }
     return render(request, 'dashboard/station_stats.html', context)
 @login_required
+def warehouse_stats(request):
+    """متابعة المؤشرات الإحصائية لأداء المستودعات (المدير العام)."""
+    if request.user.role != 'manager':
+        return redirect('dashboard:home')
+
+    from django.db.models import Count, Sum, Avg, Q
+    from trips.models import Warehouse, DischargeRecord
+
+    # مؤشرات كل مستودع (تجميع من الرحلات المنطلقة منه)
+    warehouses = Warehouse.objects.annotate(
+        trip_count=Count('trip', distinct=True),
+        total_shipped=Sum('trip__shipped_volume_15c'),
+        avg_variance=Avg('trip__discharge_record__variance_percent'),
+        suspect_count=Count('trip__discharge_record',
+                            filter=Q(trip__discharge_record__is_suspect=True), distinct=True),
+    ).order_by('-trip_count')
+
+    # المستودع المختار → المنحنى الزمني
+    selected = None
+    labels, variance_series, volume_series = [], [], []
+    wid = request.GET.get('warehouse')
+    if wid:
+        selected = Warehouse.objects.filter(pk=wid).first()
+        if selected:
+            for r in DischargeRecord.objects.filter(trip__warehouse=selected).order_by('created_at'):
+                labels.append(r.created_at.strftime('%Y-%m-%d %H:%M'))
+                variance_series.append(float(r.variance_percent))
+                volume_series.append(float(r.discharge_volume_15c))
+
+    context = {
+        'warehouses': warehouses,
+        'selected': selected,
+        'record_count': len(labels),
+        'labels_json':   json.dumps(labels, ensure_ascii=False),
+        'variance_json': json.dumps(variance_series),
+        'volume_json':   json.dumps(volume_series),
+    }
+    return render(request, 'dashboard/warehouse_stats.html', context)
+
+@login_required
 def critical_alerts(request):
     """نافذة التنبيهات الحرجة للمدير العام (إدارة الأزمات)."""
     if request.user.role != 'manager':

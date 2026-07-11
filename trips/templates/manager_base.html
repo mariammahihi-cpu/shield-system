@@ -43,11 +43,19 @@
                {% if url_name == 'station_stats' %}bg-emerald-600/20 text-emerald-300 border border-emerald-500/30{% else %}text-slate-300 hover:bg-slate-700{% endif %}">
                <i class="fas fa-chart-pie w-5"></i> إحصائيات المحطات
             </a>
+
+            <a href="{% url 'dashboard:warehouse_stats' %}"
+               class="flex items-center gap-3 px-4 py-2.5 rounded-lg transition
+               {% if url_name == 'warehouse_stats' %}bg-emerald-600/20 text-emerald-300 border border-emerald-500/30{% else %}text-slate-300 hover:bg-slate-700{% endif %}">
+                <i class="fas fa-warehouse w-5"></i> إحصائيات المستودعات
+            </a>
+            
             <a href="{% url 'trips:trip_list' %}"
                class="flex items-center gap-3 px-4 py-2.5 rounded-lg transition
                {% if url_name == 'trip_list' or url_name == 'trip_detail' %}bg-emerald-600/20 text-emerald-300 border border-emerald-500/30{% else %}text-slate-300 hover:bg-slate-700{% endif %}">
                 <i class="fas fa-list-check w-5"></i> الشحنات
             </a>
+            
             <a href="{% url 'dashboard:critical_alerts' %}"
                class="flex items-center gap-3 px-4 py-2.5 rounded-lg transition
                {% if url_name == 'critical_alerts' %}bg-emerald-600/20 text-emerald-300 border border-emerald-500/30{% else %}text-slate-300 hover:bg-slate-700{% endif %}">

@@ -160,19 +160,14 @@ def review_correction_request(request, pk):
 #الاشعارات 
 @login_required
 def notifications(request):
-    """عرض الإشعارات العامة حسب الدور، وتعليمها كمقروءة عند الفتح."""
-    role = request.user.role
+    """عرض الإشعارات لأدوار الرقابة فقط، وتعليمها كمقروءة عند الفتح."""
+    if request.user.role not in ('auditor', 'manager', 'admin'):
+        messages.error(request, 'ليس لديك صلاحية.')
+        return redirect('dashboard:home')
+
     qs = Alert.objects.select_related('trip').order_by('-created_at')
-
-    if role == 'agent':
-        qs = qs.filter(trip__agent=request.user)
-    elif role == 'dispatcher':
-        qs = qs.filter(trip__dispatcher=request.user)
-    # manager / admin / auditor: يرون كل الإشعارات
-
     alerts = list(qs)   # نجلبها قبل تحديث وقت الاطّلاع
 
-    # ✅ تعليمها كمقروءة → العدّاد يصير صفر
     request.user.notifications_seen_at = timezone.now()
     request.user.save(update_fields=['notifications_seen_at'])
 

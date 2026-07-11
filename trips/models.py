@@ -147,6 +147,13 @@ class Trip(models.Model):
         verbose_name = 'رحلة'
         verbose_name_plural = 'الرحلات'
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['truck'],
+                condition=models.Q(status__in=['pending', 'in_transit']),
+                name='one_active_trip_per_truck',
+            ),
+        ]
         indexes = [
             models.Index(fields=['trip_code']),
             models.Index(fields=['status']),
