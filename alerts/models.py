@@ -7,7 +7,7 @@ class Alert(models.Model):
         ('volume_variance',     'عجز في الحجم القياسي (ASTM)'),
         ('geofence_violation',  'تجاوز النطاق الجغرافي (GPS)'),
         ('seal_tampering',      'محاولة تلاعب بختم QR'),
-        ('unauthorized_device', 'تسجيل دخول من جهاز غير مصرح'),
+        #('unauthorized_device', 'تسجيل دخول من جهاز غير مصرح'),
     ]
     SEVERITY_LEVELS = [
         ('low',      'منخفض'),

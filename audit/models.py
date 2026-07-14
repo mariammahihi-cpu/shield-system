@@ -5,9 +5,9 @@ from django.conf import settings
 class AdminAction(models.Model):
     ACTION_CHOICES = [
         ('ban',          'حظر نهائي'),
-        ('suspend',      'تجميد مؤقت'),
+        #('suspend',      'تجميد مؤقت'),
         ('unlock',       'إلغاء قفل الحساب'),
-        ('reset_device', 'إعادة تعيين جهاز معتمد'),
+        #('reset_device', 'إعادة تعيين جهاز معتمد'),
         ('auto_lock',    'قفل تلقائي (محاولات فاشلة)'),   # ← جديد
     ]
 

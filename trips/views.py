@@ -108,7 +108,7 @@ def trip_list(request):
     # هذا هو الجزء الحرج الذي يغذي القوائم المنسدلة في الواجهة بالبيانات
     context = {
         'trips': trips,
-        'can_create': user.role in ['dispatcher', 'manager', 'admin'],
+        'can_create': user.role in ['dispatcher', 'admin'],
         'stations': Station.objects.filter(is_active=True),
         'trucks': Truck.objects.filter(status='active'),
         'agents': User.objects.filter(role='agent', is_active=True),
@@ -154,7 +154,7 @@ def trip_detail(request, trip_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])  # التعديل الحاسم: تم استبدال الديكوريتور المكسور بالديكوريتور القياسي المدمج لدجانجو
-@role_required('dispatcher', 'manager', 'admin')
+@role_required('dispatcher', 'admin')
 @transaction.atomic
 def create_trip(request):
     """إنشاء رحلة جديدة وتوليد بيانات التتبع والـ QR تلقائياً."""
